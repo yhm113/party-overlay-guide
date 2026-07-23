@@ -31,6 +31,13 @@
   .sub{color:var(--muted);margin-top:8px;font-size:15px}
   .chip{display:inline-block;margin-top:16px;padding:6px 14px;border:1px solid var(--gold);
     color:var(--gold2);border-radius:999px;font-size:13px;font-weight:600}
+  .dlbtn{display:inline-block;background:linear-gradient(135deg,var(--gold),#c99327);
+    color:#20180a;font-weight:800;font-size:17px;text-decoration:none;
+    padding:14px 30px;border-radius:14px;box-shadow:0 8px 24px rgba(232,184,75,.35);
+    transition:transform .1s}
+  .dlbtn:hover{transform:translateY(-2px)}
+  .dlbtn small{font-weight:600;opacity:.75;font-size:12px}
+  .dlnote{color:var(--muted);font-size:13px;margin-top:10px}
 
   /* Sections */
   section{background:var(--card);border:1px solid var(--line);border-radius:18px;
@@ -107,6 +114,10 @@
     <h1>파티 오버레이 <b>사용설명서</b></h1>
     <div class="sub">PC 앱 &amp; 카카오톡 봇으로 파티 모집·전적을 함께 관리해요</div>
     <div class="chip">♪ PC · 봇 어디서든 같은 파티를 공유합니다</div>
+    <div style="margin-top:22px">
+      <a class="dlbtn" href="https://github.com/yhm113/party-overlay-guide/releases/download/v1.0/party_overlay_pc.zip">⬇ PC 앱 다운로드 <small>Windows · 17MB</small></a>
+      <div class="dlnote">압축 풀고 <b>party_overlay.exe</b> 실행 · 첫 실행 시 계정 자동 생성</div>
+    </div>
   </header>
 
   <!-- 1. 이게 뭔가요 -->
