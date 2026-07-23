@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>파티 오버레이 사용설명서</title>
+<style>
+  :root{
+    --navy:#0c1636; --navy2:#132148; --gold:#e8b84b; --gold2:#f3d488;
+    --ink:#eaf0ff; --muted:#9fb0d8; --line:#2a3a68; --card:#111e42;
+    --good:#5ad19a; --warn:#ff9b6b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    background:radial-gradient(1200px 600px at 50% -10%, #1b2c5c 0%, var(--navy) 55%) fixed;
+    color:var(--ink);line-height:1.65;-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:0 18px 80px}
+
+  /* Header */
+  header{text-align:center;padding:48px 0 28px}
+  .emblem{
+    width:112px;height:112px;border-radius:50%;margin:0 auto 18px;
+    background-image:url(img/emblem.png);background-size:200% 200%;
+    background-position:0% 0%;
+    box-shadow:0 0 0 3px var(--gold), 0 10px 30px rgba(0,0,0,.5);
+  }
+  h1{font-size:30px;letter-spacing:-.5px;font-weight:800}
+  h1 b{color:var(--gold)}
+  .sub{color:var(--muted);margin-top:8px;font-size:15px}
+  .chip{display:inline-block;margin-top:16px;padding:6px 14px;border:1px solid var(--gold);
+    color:var(--gold2);border-radius:999px;font-size:13px;font-weight:600}
+
+  /* Sections */
+  section{background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:24px 22px;margin-top:22px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+  .s-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .s-num{flex:0 0 auto;width:34px;height:34px;border-radius:10px;
+    background:linear-gradient(135deg,var(--gold),#c99327);color:#20180a;
+    font-weight:800;display:grid;place-items:center;font-size:16px}
+  h2{font-size:20px;font-weight:800;letter-spacing:-.3px}
+  p{color:var(--ink)}
+  .muted{color:var(--muted)}
+  .lead{color:var(--muted);margin-bottom:14px;font-size:15px}
+
+  /* Flow diagram */
+  .flow{display:flex;align-items:center;justify-content:center;gap:10px;
+    flex-wrap:wrap;background:var(--navy2);border:1px dashed var(--line);
+    border-radius:14px;padding:18px;margin:6px 0 4px}
+  .node{background:#0e1a3e;border:1px solid var(--line);border-radius:12px;
+    padding:10px 16px;font-weight:700;text-align:center;min-width:92px}
+  .node small{display:block;color:var(--muted);font-weight:500;font-size:12px}
+  .node.db{border-color:var(--gold);color:var(--gold2)}
+  .arrow{color:var(--gold);font-size:20px}
+
+  /* Cards / steps */
+  .step{display:flex;gap:14px;padding:14px 0;border-top:1px solid var(--line)}
+  .step:first-of-type{border-top:0}
+  .dot{flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:var(--navy2);
+    border:1px solid var(--gold);color:var(--gold2);display:grid;place-items:center;
+    font-size:13px;font-weight:700}
+  .step b{color:var(--gold2)}
+
+  /* Command table */
+  table{width:100%;border-collapse:collapse;margin-top:6px;font-size:14.5px}
+  th,td{text-align:left;padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:13px;text-transform:none}
+  td.cmd{white-space:nowrap}
+  code{background:#0a1330;border:1px solid var(--line);border-radius:7px;
+    padding:2px 8px;color:var(--gold2);font-family:"D2Coding",Consolas,monospace;font-size:13.5px}
+  .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:6px;
+    background:#20325f;color:var(--muted);margin-left:2px}
+  .tag.host{background:#3a2a12;color:var(--gold2)}
+
+  /* Callouts */
+  .note{border-radius:14px;padding:14px 16px;margin-top:14px;font-size:14.5px}
+  .note.tip{background:rgba(90,209,154,.08);border:1px solid rgba(90,209,154,.35)}
+  .note.warn{background:rgba(255,155,107,.08);border:1px solid rgba(255,155,107,.4)}
+  .note b{color:var(--gold2)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+  @media(max-width:560px){.grid2{grid-template-columns:1fr}}
+  .mini{background:var(--navy2);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .mini h3{font-size:15px;color:var(--gold2);margin-bottom:6px}
+  .mini p{font-size:14px;color:var(--muted)}
+
+  /* Chat mock */
+  .chat{background:#0a1330;border:1px solid var(--line);border-radius:14px;
+    padding:14px;margin-top:10px;font-family:"D2Coding",Consolas,monospace;font-size:13.5px;
+    white-space:pre-wrap;color:#cfe0ff;overflow-x:auto}
+  .chat .me{color:var(--gold2)}
+
+  footer{text-align:center;margin-top:40px;color:var(--muted);font-size:13px}
+  .mascot{width:96px;height:96px;border-radius:20px;object-fit:cover;
+    border:2px solid var(--gold);margin-bottom:12px;box-shadow:0 8px 20px rgba(0,0,0,.4)}
+  ul.clean{list-style:none;margin-top:6px}
+  ul.clean li{padding:5px 0 5px 22px;position:relative;color:var(--ink)}
+  ul.clean li::before{content:"♪";position:absolute;left:0;color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="emblem" role="img" aria-label="길드 엠블럼"></div>
+    <h1>파티 오버레이 <b>사용설명서</b></h1>
+    <div class="sub">PC 앱 &amp; 카카오톡 봇으로 파티 모집·전적을 함께 관리해요</div>
+    <div class="chip">♪ PC · 봇 어디서든 같은 파티를 공유합니다</div>
+  </header>
+
+  <!-- 1. 이게 뭔가요 -->
+  <section>
+    <div class="s-head"><div class="s-num">?</div><h2>이게 뭔가요</h2></div>
+    <p class="lead">PC 앱과 카톡 봇이 <b>같은 클라우드(서버)</b>를 함께 봅니다. 어디서 파티를 만들든
+    앱·PC·봇에 모두 나타나고, 참가·출발·전적이 자동으로 공유돼요.</p>
+    <div class="flow">
+      <div class="node">PC 앱<small>미니창</small></div>
+      <div class="arrow">→</div>
+      <div class="node db">☁ 서버<small>파티 · 전적</small></div>
+      <div class="arrow">←</div>
+      <div class="node">카톡 봇<small>/앱파티</small></div>
+    </div>
+    <div class="note tip">💡 <b>봇 → 앱</b>은 즉시 반영, <b>앱 → 봇</b>은 카톡방에 자동 공지(약 15초)돼요.</div>
+  </section>
+
+  <!-- 2. 시작하기 -->
+  <section>
+    <div class="s-head"><div class="s-num">1</div><h2>시작하기 — 계정 만들기 (최초 1회)</h2></div>
+    <p class="lead">파티를 <b>만들거나 참가</b>하려면 계정이 필요해요. 셋 중 하나면 됩니다.</p>
+    <div class="step"><div class="dot">A</div><div>
+      <b>봇에서 바로 가입</b> (앱 없어도 OK)<br>
+      <code>/앱파티 가입 캐릭터명</code> → <b>복구코드</b>가 나와요. <b>꼭 저장!</b>
+    </div></div>
+    <div class="step"><div class="dot">B</div><div>
+      <b>앱 계정을 봇에 연결</b> (앱을 먼저 썼다면)<br>
+      앱 설정탭의 복구코드로 → <code>/앱파티 연동 XXXX-XXXX</code>
+    </div></div>
+    <div class="step"><div class="dot">C</div><div>
+      <b>복구코드 다시 보기</b> → <code>/앱파티 코드</code>
+    </div></div>
+    <div class="note tip">🔑 봇 <b>가입</b>으로 받은 복구코드를 나중에 <b>앱 설정탭</b>에 입력하면,
+    봇에서 쌓은 파티·전적이 앱에 그대로 이어져요. (같은 계정으로 통합)</div>
+  </section>
+
+  <!-- 3. 봇 사용법 -->
+  <section>
+    <div class="s-head"><div class="s-num">2</div><h2>카톡 봇 사용법 — <code>/앱파티</code></h2></div>
+    <p class="lead">참가·나가기·출발·완료·확인은 <b>먼저 <code>/앱파티</code>로 목록</b>을 봐야 번호가 잡혀요.</p>
+    <table>
+      <tr><th>명령어</th><th>설명</th></tr>
+      <tr><td class="cmd"><code>/앱파티</code></td><td>열린 파티 목록 (번호 확인)</td></tr>
+      <tr><td class="cmd"><code>/앱파티 생성 카브 캐릭</code></td><td>파티 만들기 (카브=카브락일)</td></tr>
+      <tr><td class="cmd"><code>/앱파티 참가 1 캐릭</code></td><td>1번 파티에 참가</td></tr>
+      <tr><td class="cmd"><code>/앱파티 확인 1</code></td><td>1번 파티 멤버 상세 보기</td></tr>
+      <tr><td class="cmd"><code>/앱파티 출발 1</code></td><td>출발! 멤버에게 알림 <span class="tag host">방장</span></td></tr>
+      <tr><td class="cmd"><code>/앱파티 완료 1</code></td><td>전적 기록 + 파티 종료 <span class="tag host">방장</span></td></tr>
+      <tr><td class="cmd"><code>/앱파티 나가기 1</code></td><td>나가기 <span class="tag">방장이 나가면 해산</span></td></tr>
+      <tr><td class="cmd"><code>/앱파티 전적</code></td><td>내 전적 (캐릭별 주간·누적)</td></tr>
+      <tr><td class="cmd"><code>/앱파티 도움말</code></td><td>전체 명령어 보기</td></tr>
+    </table>
+    <p class="muted" style="margin-top:12px;font-size:13.5px">레이드 입력은 <b>번호</b>(<code>1</code>) ·
+    <b>이름</b>(<code>카브락일</code>) · <b>별칭</b>(<code>카브</code>,<code>카일</code>) 다 인식해요.</p>
+    <div class="chat"><span class="me">나: /앱파티 생성 카브 사르시안</span>
+🎵 앱 파티 생성!
+[앱 파티]
+방제 : 카브락일
+인원 : 1/8
+- 사르시안
+-
+- ...</div>
+  </section>
+
+  <!-- 4. PC 앱 -->
+  <section>
+    <div class="s-head"><div class="s-num">3</div><h2>PC 앱 사용법</h2></div>
+    <p class="lead">화면 위에 항상 떠 있는 <b>미니창</b>이에요. 게임 하면서 파티를 확인할 수 있어요.</p>
+    <div class="grid2">
+      <div class="mini"><h3>📑 4개 탭</h3><p>파티 · 만들기 · 전적 · 설정</p></div>
+      <div class="mini"><h3>📌 핀 버튼</h3><p>우상단 — 항상 위 켜기/끄기 (게임 위에 띄우기)</p></div>
+      <div class="mini"><h3>🗂 트레이</h3><p>작업표시줄엔 안 보이고, 우하단 트레이 아이콘으로 관리</p></div>
+      <div class="mini"><h3>✖ 창 닫기</h3><p>종료가 아니라 <b>트레이로 숨김</b>. 완전 종료는 트레이 우클릭 → 종료</p></div>
+    </div>
+    <ul class="clean">
+      <li><b>만들기</b> 탭: 레이드 선택 + 캐릭터 → 파티 생성</li>
+      <li><b>파티</b> 탭: 참가 · 출발 · 완료 · 취소 버튼</li>
+      <li><b>전적</b> 탭: 캐릭터별 주간 · 누적 기록</li>
+      <li><b>설정</b> 탭: 닉네임 · 캐릭터 · <b>복구코드</b>(봇/다른 기기 연결용)</li>
+    </ul>
+  </section>
+
+  <!-- 5. 같이 쓰기 -->
+  <section>
+    <div class="s-head"><div class="s-num">4</div><h2>이렇게 같이 써요</h2></div>
+    <div class="step"><div class="dot">1</div><div><b>A</b>가 PC 앱(또는 봇)에서 카브락일 파티 생성 → 카톡방에 <b>🎵 새 파티</b> 자동 공지</div></div>
+    <div class="step"><div class="dot">2</div><div><b>B</b>가 봇에서 <code>/앱파티 참가 1</code> → A의 PC 앱 인원이 <b>즉시</b> 2/8로 증가</div></div>
+    <div class="step"><div class="dot">3</div><div>방장이 <b>출발</b> → 멤버 전원에게 알림 + 카톡방에 참가자 목록 공지</div></div>
+    <div class="step"><div class="dot">4</div><div>클리어 후 <b>완료</b> → 참가자 전원 전적 자동 기록</div></div>
+  </section>
+
+  <!-- 6. 주의 -->
+  <section>
+    <div class="s-head"><div class="s-num">!</div><h2>딱 하나만 주의</h2></div>
+    <p class="lead">봇에 파티 명령이 <b>두 개</b> 있어요. 헷갈리지 마세요.</p>
+    <div class="grid2">
+      <div class="mini" style="border-color:var(--good)">
+        <h3 style="color:var(--good)">✅ /앱파티</h3>
+        <p>앱·PC와 <b>연동됨</b>. 같은 파티 공유. <b>이걸 쓰세요.</b></p>
+      </div>
+      <div class="mini" style="border-color:var(--warn)">
+        <h3 style="color:var(--warn)">❌ /파티</h3>
+        <p>카톡 안에서만. 앱엔 <b>안 뜸</b>.</p>
+      </div>
+    </div>
+    <div class="note warn">⚠️ 카톡 <b>닉네임 기준</b>으로 계정을 구분해요. 닉네임을 바꾸면 <code>/앱파티 연동</code>을 다시 해주세요.</div>
+  </section>
+
+  <footer>
+    <img class="mascot" src="img/mascot.png" alt="길드 마스코트">
+    <div>🎵 즐거운 파티 되세요! · 문제가 생기면 운영진에게 문의하세요</div>
+  </footer>
+
+</div>
+</body>
+</html>
