@@ -38,7 +38,10 @@
     transition:transform .1s}
   .dlbtn:hover{transform:translateY(-2px)}
   .dlbtn small{font-weight:600;opacity:.75;font-size:12px}
-  .dlnote{color:var(--muted);font-size:13px;margin-top:10px}
+  .dlrow{margin-top:22px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .dlbtn.ghost{background:transparent;color:var(--gold2);
+    box-shadow:inset 0 0 0 2px var(--gold)}
+  .dlnote{color:var(--muted);font-size:13px;margin-top:12px}
 
   /* Sections */
   section{background:var(--card);border:1px solid var(--line);border-radius:18px;
@@ -116,10 +119,11 @@
     <h1>파티 오버레이 <b>사용설명서</b></h1>
     <div class="sub">PC 앱 &amp; 카카오톡 봇으로 파티 모집·전적을 함께 관리해요</div>
     <div class="chip">♪ PC · 봇 어디서든 같은 파티를 공유합니다</div>
-    <div style="margin-top:22px">
-      <a class="dlbtn" href="https://github.com/yhm113/party-overlay-guide/releases/download/v1.0/party_overlay_pc.zip">⬇ PC 앱 다운로드 <small>Windows · 17MB</small></a>
-      <div class="dlnote">압축 풀고 <b>party_overlay.exe</b> 실행 · 첫 실행 시 계정 자동 생성</div>
+    <div class="dlrow">
+      <a class="dlbtn" href="https://github.com/yhm113/party-overlay-guide/releases/download/v1.0/party_overlay.apk">📱 안드로이드 앱 <small>APK · 50MB</small></a>
+      <a class="dlbtn ghost" href="https://github.com/yhm113/party-overlay-guide/releases/download/v1.0/party_overlay_pc.zip">🖥 PC 앱 <small>Windows · 17MB</small></a>
     </div>
+    <div class="dlnote">📱 APK: 받아서 설치(‘출처 불명 앱’ 허용 필요) · 🖥 PC: 압축 풀고 <b>party_overlay.exe</b> 실행 · 첫 실행 시 계정 자동 생성</div>
   </header>
 
   <!-- 1. 이게 뭔가요 -->
@@ -200,6 +204,18 @@
       <li><b>전적</b> 탭: 캐릭터별 주간 · 누적 기록</li>
       <li><b>설정</b> 탭: 닉네임 · 캐릭터 · <b>복구코드</b>(봇/다른 기기 연결용)</li>
     </ul>
+  </section>
+
+  <!-- 4-2. 안드로이드 앱 / 오버레이 -->
+  <section>
+    <div class="s-head"><div class="s-num">📱</div><h2>안드로이드 앱 · 게임 위 오버레이</h2></div>
+    <p class="lead">APK를 설치하면 앱으로도 쓰고, <b>게임 화면 위에 작은 오버레이</b>로 파티를 볼 수 있어요.</p>
+    <div class="step"><div class="dot">1</div><div><b>설치</b>: APK 받아서 열기 → “출처를 알 수 없는 앱” 허용 → 설치</div></div>
+    <div class="step"><div class="dot">2</div><div><b>오버레이 켜기</b>: 앱 상단 <b>화면 오버레이 버튼</b> → “다른 앱 위에 표시” 권한 허용 → 게임 위에 창이 뜸</div></div>
+    <div class="step"><div class="dot">3</div><div><b>미니칩</b>(접힌 상태): <b>탭 = 펼치기</b> · <b>끌기 = 이동</b></div></div>
+    <div class="step"><div class="dot">4</div><div><b>큰 창</b>: 리스트 <b>스크롤</b>로 파티 확인 · 카드에서 <b>참가/출발</b></div></div>
+    <div class="step"><div class="dot">5</div><div><b>창 옮기기</b>: 헤더의 <b>✥</b> 탭 → 이동 모드(주황) → 창 끌어 이동 → <b>✓</b> 탭해 완료</div></div>
+    <div class="note tip">💡 오버레이도 PC·봇과 <b>같은 파티</b>를 봐요. 참가·출발이 실시간 공유됩니다.</div>
   </section>
 
   <!-- 5. 같이 쓰기 -->
