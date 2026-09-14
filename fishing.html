@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>🎣 손맛 대결</title>
+<style>
+  :root {
+    --bg: #0d1b2a; --panel: #14263c; --line: #24405f;
+    --txt: #e8f0f8; --sub: #9fb6cd; --accent: #4fc3f7;
+    --good: #45d17a; --warn: #f6c343; --bad: #ff5b5b;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: radial-gradient(120% 80% at 50% 0%, #1a3a5c 0%, var(--bg) 60%);
+    color: var(--txt); font-family: -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 18px; min-height: 100%; user-select: none; touch-action: manipulation;
+  }
+  .card {
+    width: 100%; max-width: 460px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 20px; padding: 22px 20px 26px;
+    box-shadow: 0 18px 50px rgba(0,0,0,.45);
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; text-align: center; }
+  .sub { color: var(--sub); font-size: 13px; text-align: center; margin-bottom: 16px; }
+  .fishbox { text-align: center; margin: 6px 0 14px; }
+  .fishemoji { font-size: 56px; line-height: 1; display: inline-block; }
+  .fishemoji.wiggle { animation: wig .5s ease-in-out infinite; }
+  @keyframes wig { 0%,100%{transform:rotate(-8deg) translateX(-3px)} 50%{transform:rotate(8deg) translateX(3px)} }
+  .tier { font-weight: 700; }
+  .meta { font-size: 12px; color: var(--sub); margin-top: 3px; }
+
+  .gauge { margin: 12px 0; }
+  .gauge .lbl { display: flex; justify-content: space-between; font-size: 12px; color: var(--sub); margin-bottom: 4px; }
+  .bar { height: 20px; background: #0a1522; border-radius: 12px; overflow: hidden; position: relative; border: 1px solid var(--line); }
+  .fill { height: 100%; width: 0%; transition: width .05s linear; border-radius: 12px; }
+  #progFill { background: linear-gradient(90deg, #2e9bd6, var(--good)); }
+  #tenFill  { background: linear-gradient(90deg, var(--good), var(--warn) 60%, var(--bad)); }
+  .redzone { position: absolute; top: 0; right: 0; height: 100%; width: 22%; background: rgba(255,91,91,.18); border-left: 1px dashed rgba(255,91,91,.5); }
+
+  #hold {
+    width: 100%; margin-top: 18px; padding: 20px; font-size: 20px; font-weight: 800;
+    color: #06263a; background: linear-gradient(180deg, #6fd0ff, var(--accent));
+    border: none; border-radius: 16px; cursor: pointer; box-shadow: 0 8px 0 #1d7fb0;
+    transition: transform .05s, box-shadow .05s;
+  }
+  #hold:active, #hold.down { transform: translateY(5px); box-shadow: 0 3px 0 #1d7fb0; }
+  #hold[disabled] { opacity: .5; box-shadow: none; }
+  .hint { text-align: center; color: var(--sub); font-size: 12px; margin-top: 10px; line-height: 1.6; }
+  .timer { text-align: center; font-size: 13px; color: var(--sub); margin-top: 8px; }
+  .timer b { color: var(--txt); }
+
+  .btn {
+    width: 100%; margin-top: 14px; padding: 15px; font-size: 16px; font-weight: 700;
+    border: none; border-radius: 14px; cursor: pointer; color: #fff;
+  }
+  .btn.primary { background: var(--accent); color: #06263a; }
+  .btn.retry { background: var(--warn); color: #3a2e00; }
+  .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--sub); }
+
+  .result { text-align: center; }
+  .result .big { font-size: 46px; margin: 6px 0; }
+  .result .headline { font-size: 22px; font-weight: 800; margin: 4px 0; }
+  .result .desc { color: var(--sub); font-size: 14px; margin: 8px 0 4px; line-height: 1.6; }
+  .good-c { color: var(--good); } .warn-c { color: var(--warn); } .bad-c { color: var(--bad); }
+  .center { text-align: center; }
+  .spinner { margin: 30px auto; width: 34px; height: 34px; border: 4px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <!-- 로딩 -->
+    <div id="loading" class="center">
+      <div class="spinner"></div>
+      <div class="sub">입질 확인 중...</div>
+    </div>
+
+    <!-- 에러/만료 -->
+    <div id="errbox" class="center hidden">
+      <div class="big" style="font-size:44px">🎣</div>
+      <h1>낚싯대를 던질 수 없어요</h1>
+      <p class="desc sub" id="errmsg"></p>
+    </div>
+
+    <!-- 인트로 -->
+    <div id="intro" class="hidden">
+      <h1>🎣 손맛 대결!</h1>
+      <div class="sub" id="introSub"></div>
+      <div class="fishbox">
+        <span class="fishemoji" id="introEmoji">🐟</span>
+        <div class="tier" id="introTier"></div>
+        <div class="meta" id="introMeta"></div>
+      </div>
+      <div class="hint">
+        <b style="color:var(--txt)">꾹 눌러서 릴을 감고</b>, 물고기가 발악하면 손을 떼세요.<br>
+        장력(빨간 구간)이 꽉 차면 <span class="bad-c">라인이 끊깁니다</span>.
+      </div>
+      <button class="btn primary" id="startBtn">시작하기</button>
+    </div>
+
+    <!-- 게임 -->
+    <div id="game" class="hidden">
+      <div class="fishbox">
+        <span class="fishemoji" id="gameEmoji">🐟</span>
+        <div class="meta" id="gameStatus">릴을 감으세요!</div>
+      </div>
+      <div class="gauge">
+        <div class="lbl"><span>진행도</span><span id="progTxt">0%</span></div>
+        <div class="bar"><div class="fill" id="progFill"></div></div>
+      </div>
+      <div class="gauge">
+        <div class="lbl"><span>라인 장력</span><span id="tenTxt">0%</span></div>
+        <div class="bar"><div class="redzone"></div><div class="fill" id="tenFill"></div></div>
+      </div>
+      <button id="hold">꾹 눌러 릴 감기</button>
+      <div class="timer">남은 시간 <b id="timeTxt">30.0</b>초 · 시도 <b id="attemptTxt">1/2</b></div>
+    </div>
+
+    <!-- 결과 -->
+    <div id="result" class="hidden result">
+      <div class="big" id="resEmoji">🎉</div>
+      <div class="headline" id="resHead"></div>
+      <div class="desc" id="resDesc"></div>
+      <button class="btn retry hidden" id="retryBtn">🔁 재도전 (마지막 기회)</button>
+      <div class="hint" id="resHint"></div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+  var FN = "https://asia-northeast3-partyoverlay-786d6.cloudfunctions.net";
+
+  var TIER_EMOJI = { "쓰레기":"🗑","일반":"🐟","고급":"🐠","희귀":"💎","영웅":"🔥","전설":"🌟","신화":"🐉" };
+  var TIER_COLOR = { "쓰레기":"#9fb6cd","일반":"#8fd0ff","고급":"#5ad1c0","희귀":"#7ea6ff","영웅":"#ff9d5c","전설":"#ffd24a","신화":"#ff6fe0" };
+
+  function $(id){ return document.getElementById(id); }
+  function show(id){ $(id).classList.remove("hidden"); }
+  function hide(id){ $(id).classList.add("hidden"); }
+  function qs(k){ var m = location.search.match(new RegExp("[?&]"+k+"=([^&]+)")); return m ? decodeURIComponent(m[1]) : ""; }
+
+  var token = qs("t");
+  var sess = null;
+  var attempt = 1;           // 1=첫 시도, 2=재도전
+  var MAX_ATTEMPT = 2;
+  var resolved = false;
+
+  function fail(msg){ hide("loading"); show("errbox"); $("errmsg").textContent = msg; }
+
+  if (!token) { fail("잘못된 접속이에요. 카톡의 /낚시 링크로 다시 들어와 주세요."); return; }
+
+  // ── 세션 조회 ──
+  fetch(FN + "/fishState?t=" + encodeURIComponent(token))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d || !d.ok) { fail((d && d.error) || "세션을 불러오지 못했어요."); return; }
+      if (d.status === "done") { fail("이미 끝난 대결이에요. 카톡에서 결과를 확인하세요!"); return; }
+      sess = d;
+      initIntro();
+    })
+    .catch(function(){ fail("서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요."); });
+
+  function initIntro(){
+    var emo = TIER_EMOJI[sess.targetTier] || "🐟";
+    var col = TIER_COLOR[sess.targetTier] || "#8fd0ff";
+    hide("loading"); show("intro");
+    $("introSub").textContent = sess.nick + " 님, 뭔가 걸렸다!";
+    $("introEmoji").textContent = emo;
+    $("introTier").textContent = "[" + sess.targetTier + "] " + (sess.targetFish || "?");
+    $("introTier").style.color = col;
+    $("introMeta").textContent = "🎣 " + (sess.rodName || "낚싯대") +
+      "  ·  물고기 힘 " + Math.round((sess.strength||0.5)*100) + "%";
+    $("startBtn").onclick = function(){ hide("intro"); startGame(); };
+  }
+
+  // ── 줄다리기 게임 ──
+  var LIMIT = 24;            // 제한시간(초)
+  var progress, tension, holding, timeLeft, peakTension;
+  var struggle, struggleTimer;
+  var raf = null, lastT = 0, tStart = 0;
+
+  function startGame(){
+    show("game");
+    progress = 0; tension = 0; holding = false;
+    timeLeft = LIMIT; peakTension = 0;
+    struggle = false; struggleTimer = 0.8 + Math.random()*1.1; // 첫 발악까지 여유
+    tStart = Date.now();
+    $("gameEmoji").textContent = TIER_EMOJI[sess.targetTier] || "🐟";
+    $("attemptTxt").textContent = attempt + "/" + MAX_ATTEMPT;
+    bindHold();
+    lastT = performance.now();
+    raf = requestAnimationFrame(loop);
+  }
+
+  function bindHold(){
+    var btn = $("hold");
+    btn.disabled = false;
+    function down(e){ e.preventDefault(); holding = true; btn.classList.add("down"); }
+    function up(e){ if(e) e.preventDefault(); holding = false; btn.classList.remove("down"); }
+    btn.ontouchstart = down; btn.ontouchend = up; btn.ontouchcancel = up;
+    btn.onmousedown = down; btn.onmouseup = up; btn.onmouseleave = up;
+    // 안전: 창 밖으로 떼도 놓기
+    window.onmouseup = up; window.ontouchend = up;
+  }
+
+  function loop(now){
+    var dt = Math.min(0.05, (now - lastT)/1000);
+    lastT = now;
+
+    var strength = sess.strength || 0.5;     // 0~1 (물고기 힘)
+    var rodPower = sess.rodPower || 1;        // 1~4 (낚싯대 성능)
+    var reelFactor = 0.9 + rodPower * 0.06;   // 좋은 대일수록 조금 잘 감김
+    var tenFactor  = 1.18 - rodPower * 0.08;  // 좋은 대일수록 장력 덜 오름
+
+    // 발악(struggle) 스케줄링
+    struggleTimer -= dt;
+    if (!struggle && struggleTimer <= 0) {
+      struggle = true;
+      struggleTimer = 0.4 + Math.random()*0.5 + strength*0.6; // 발악 지속(힘↑=길게)
+    } else if (struggle && struggleTimer <= 0) {
+      struggle = false;
+      struggleTimer = (1.2 - strength*0.55) + Math.random()*1.0; // 다음 발악까지(힘↑=자주)
+    }
+
+    // 진행도: 홀드하면 항상 쌓임(놓으면 소폭 감소). 난이도는 장력에 실림.
+    if (holding) {
+      progress += (20 * reelFactor) * dt;
+    } else {
+      progress -= 5 * dt;
+    }
+
+    // 장력: 물고기 힘 + 발악이 여기에 실림 (100%면 라인 끊김)
+    if (holding) {
+      var rise = (18 + strength*34) * (struggle ? 2.3 : 1) * tenFactor;
+      tension += rise * dt;
+    } else {
+      tension -= 48 * dt;
+    }
+
+    if (progress < 0) progress = 0;
+    if (progress > 100) progress = 100;
+    if (tension < 0) tension = 0;
+    if (tension > peakTension) peakTension = tension;
+
+    timeLeft -= dt;
+
+    render();
+
+    // 판정
+    if (tension >= 100) { endGame("snap"); return; }
+    if (timeLeft <= 0)  { endGame("timeout"); return; }
+    if (progress >= 100){ endGame("win"); return; }
+
+    raf = requestAnimationFrame(loop);
+  }
+
+  function render(){
+    $("progFill").style.width = progress.toFixed(1) + "%";
+    $("tenFill").style.width = tension.toFixed(1) + "%";
+    $("progTxt").textContent = Math.round(progress) + "%";
+    $("tenTxt").textContent = Math.round(tension) + "%";
+    $("timeTxt").textContent = Math.max(0, timeLeft).toFixed(1);
+    var emo = $("gameEmoji");
+    if (struggle) { emo.classList.add("wiggle"); $("gameStatus").textContent = "발악 중! 손 떼!"; $("gameStatus").className = "meta bad-c"; }
+    else { emo.classList.remove("wiggle"); $("gameStatus").textContent = holding ? "감는 중..." : "릴을 감으세요!"; $("gameStatus").className = "meta"; }
+  }
+
+  function endGame(kind){
+    if (raf) cancelAnimationFrame(raf); raf = null;
+    holding = false;
+    $("hold").disabled = true;
+    hide("game"); show("result");
+    $("retryBtn").classList.add("hidden");
+    $("resHint").textContent = "";
+
+    if (kind === "win") {
+      var elapsed = (LIMIT - timeLeft);
+      // 대성공: 성공 시 10% 확률(운). 등급 2단계↑
+      var great = (Math.random() < 0.10);
+      var outcome = great ? "great" : "success";
+      $("resEmoji").textContent = great ? "🌟" : "🎉";
+      $("resHead").innerHTML = great
+        ? '<span class="good-c">대성공!!</span> 두 단계 위 물고기!'
+        : '<span class="good-c">성공!</span> 한 단계 위 물고기!';
+      $("resHead").className = "headline";
+      $("resDesc").textContent = great
+        ? "운까지 따랐다! 대박 손맛! (" + elapsed.toFixed(1) + "초)"
+        : "멋지게 낚아 올렸어요! (" + elapsed.toFixed(1) + "초)";
+      doResolve(outcome);
+    } else {
+      // 실패 (snap=라인끊김 / timeout=놓침)
+      var canRetry = attempt < MAX_ATTEMPT;
+      $("resEmoji").textContent = kind === "snap" ? "💥" : "🐟💨";
+      $("resHead").innerHTML = kind === "snap"
+        ? '<span class="bad-c">라인이 끊어졌다!</span>'
+        : '<span class="bad-c">놓쳤다...</span>';
+      $("resHead").className = "headline";
+      if (canRetry) {
+        $("resDesc").textContent = "아직 기회가 한 번 남았어요. 재도전할까요?";
+        var rb = $("retryBtn");
+        rb.classList.remove("hidden");
+        rb.onclick = function(){
+          attempt = MAX_ATTEMPT;
+          hide("result");
+          startGame();
+        };
+      } else {
+        $("resDesc").textContent = "결국 놓쳤어요. 미끼값이 차감돼요 ㅠ";
+        doResolve("fail");
+      }
+    }
+  }
+
+  function doResolve(outcome){
+    if (resolved) return; resolved = true;
+    $("hold").disabled = true;
+    var body = JSON.stringify({ token: token, outcome: outcome, retryUsed: (attempt >= MAX_ATTEMPT) });
+    fetch(FN + "/fishResolve", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: body
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(){ $("resHint").textContent = "✅ 결과가 카톡으로 전송됐어요. 채팅방을 확인하세요!"; })
+    .catch(function(){ $("resHint").textContent = "⚠️ 결과 전송에 실패했어요. 네트워크 확인 후 새로고침해 보세요."; });
+  }
+})();
+</script>
+</body>
+</html>
