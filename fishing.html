@@ -184,7 +184,7 @@
     $("introTier").style.color = col;
     $("introMeta").textContent = "🎣 " + (sess.rodName || "낚싯대") +
       "  ·  물고기 힘 " + Math.round((sess.strength||0.5)*100) + "%";
-    loadRod(sess.rodName);   // 낚싯대 이미지 프리로드(인트로 읽는 동안)
+    loadRod();   // 낚싯대 이미지 프리로드(인트로 읽는 동안)
     $("startBtn").onclick = function(){ hide("intro"); startGame(); };
   }
 
@@ -203,10 +203,22 @@
     "10":{tip:[436.10,73.70],mount:[246.55,312.82],guides:[[229.41,302.63],[315.52,190.40],[354.76,149.77],[386.13,118.22],[412.07,93.40],[436.10,73.70]]}
   };
   var REEL_SCALE = 0.23, HOOK_SCALE = 0.12;
+  // 한글 rodName 은 NFC/NFD 정규화가 갈려 매칭이 빗나갈 수 있음 → rodMult(숫자)로도 매핑.
+  var ROD_BY_MULT = { "1":"01","1.2":"02","1.35":"03","1.5":"04","1.7":"05","1.9":"06","2.2":"07","2.6":"08","3":"09","4":"10" };
+  var ROD_FOLDER_N = {}; // NFC 정규화 키
+  (function(){ for (var k in ROD_FOLDER) { ROD_FOLDER_N[k.normalize ? k.normalize("NFC") : k] = ROD_FOLDER[k]; } })();
+  function rodFolder(){
+    var nm = (sess && sess.rodName) || "";
+    if (nm && nm.normalize) nm = nm.normalize("NFC");
+    if (ROD_FOLDER_N[nm]) return ROD_FOLDER_N[nm];              // 1) 이름(정규화) 매칭
+    var mk = sess ? String(sess.rodMult) : "";
+    if (ROD_BY_MULT[mk]) return ROD_BY_MULT[mk];                // 2) 배수(숫자) 매칭 — 인코딩 무관
+    return "01";
+  }
   var rig = null; // {folder, body, hook, sheet, ready}
   function loadImg(src){ return new Promise(function(res,rej){ var im=new Image(); im.onload=function(){res(im);}; im.onerror=rej; im.src=src; }); }
-  function loadRod(name){
-    var f = ROD_FOLDER[name] || "01";
+  function loadRod(){
+    var f = rodFolder();
     rig = { folder:f, ready:false };
     Promise.all([loadImg("img/rods/"+f+"/body.png"), loadImg("img/rods/"+f+"/hook.png"), loadImg("img/rods/"+f+"/reel.png")])
       .then(function(a){ if(rig){ rig.body=a[0]; rig.hook=a[1]; rig.sheet=a[2]; rig.ready=true; } })
