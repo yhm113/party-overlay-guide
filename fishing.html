@@ -117,7 +117,7 @@
         <div class="bar"><div class="redzone"></div><div class="fill" id="tenFill"></div></div>
       </div>
       <button id="hold">꾹 눌러 릴 감기</button>
-      <div class="timer">남은 시간 <b id="timeTxt">30.0</b>초 · 시도 <b id="attemptTxt">1/2</b></div>
+      <div class="timer">남은 시간 <b id="timeTxt">24.0</b>초 · 시도 <b id="attemptTxt">1/2</b></div>
     </div>
 
     <!-- 결과 -->
@@ -125,7 +125,7 @@
       <div class="big" id="resEmoji">🎉</div>
       <div class="headline" id="resHead"></div>
       <div class="desc" id="resDesc"></div>
-      <button class="btn retry hidden" id="retryBtn">🔁 재도전 (마지막 기회)</button>
+      <button class="btn retry hidden" id="retryBtn">🔁 재도전</button>
       <div class="hint" id="resHint"></div>
     </div>
   </div>
@@ -145,9 +145,9 @@
 
   var token = qs("t");
   var sess = null;
-  var attempt = 1;           // 1=첫 시도, 2=재도전
-  var MAX_ATTEMPT = 2;
   var resolved = false;
+  var attempt = 1;          // 1=첫 판(공짜), 2=재도전(미끼값 차감)
+  var MAX_ATTEMPT = 2;
 
   function fail(msg){ hide("loading"); show("errbox"); $("errmsg").textContent = msg; }
 
@@ -293,15 +293,16 @@
       doResolve(outcome);
     } else {
       // 실패 (snap=라인끊김 / timeout=놓침)
-      var canRetry = attempt < MAX_ATTEMPT;
       $("resEmoji").textContent = kind === "snap" ? "💥" : "🐟💨";
       $("resHead").innerHTML = kind === "snap"
         ? '<span class="bad-c">라인이 끊어졌다!</span>'
         : '<span class="bad-c">놓쳤다...</span>';
       $("resHead").className = "headline";
-      if (canRetry) {
-        $("resDesc").textContent = "아직 기회가 한 번 남았어요. 재도전할까요?";
+      if (attempt < MAX_ATTEMPT) {
+        var cost = sess.baitCost || 0;
+        $("resDesc").innerHTML = "첫 판은 공짜! <b>미끼값 " + cost + "코인</b> 내고 한 번 더 해볼까요?";
         var rb = $("retryBtn");
+        rb.textContent = "🔁 재도전 (미끼값 " + cost + "코인)";
         rb.classList.remove("hidden");
         rb.onclick = function(){
           attempt = MAX_ATTEMPT;
@@ -309,7 +310,7 @@
           startGame();
         };
       } else {
-        $("resDesc").textContent = "결국 놓쳤어요. 미끼값이 차감돼요 ㅠ";
+        $("resDesc").textContent = "재도전까지 했지만 놓쳤어요. 미끼값이 차감돼요 ㅠ";
         doResolve("fail");
       }
     }
