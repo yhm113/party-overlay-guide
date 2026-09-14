@@ -106,8 +106,8 @@
         <div class="meta" id="introMeta"></div>
       </div>
       <div class="hint">
-        <b style="color:var(--txt)">꾹 눌러서 릴을 감고</b>, 물고기가 발악하면 손을 떼세요.<br>
-        장력(빨간 구간)이 꽉 차면 <span class="bad-c">라인이 끊깁니다</span>.
+        <b style="color:var(--txt)">부드럽게 꾹 눌러</b> 릴을 감고, 발악하면 손을 떼세요.<br>
+        <span class="bad-c">마구 두드리면(잡아챌 때마다 장력↑) 줄이 끊깁니다.</span>
       </div>
       <button class="btn primary" id="startBtn">시작하기</button>
     </div>
@@ -189,6 +189,7 @@
 
   // ── 줄다리기 게임 ──
   var LIMIT = 24;            // 제한시간(초)
+  var GRAB_SHOCK = 7;        // 새로 '확 잡아챌' 때마다 장력 순간 상승 → 막클릭 방지
   var progress, tension, holding, timeLeft, peakTension;
   var struggle, struggleTimer;
   var raf = null, lastT = 0, tStart = 0;
@@ -209,7 +210,7 @@
   function bindHold(){
     var btn = $("hold");
     btn.disabled = false;
-    function down(e){ e.preventDefault(); holding = true; btn.classList.add("down"); }
+    function down(e){ e.preventDefault(); if (!holding) { holding = true; tension += GRAB_SHOCK; } btn.classList.add("down"); }
     function up(e){ if(e) e.preventDefault(); holding = false; btn.classList.remove("down"); }
     btn.ontouchstart = down; btn.ontouchend = up; btn.ontouchcancel = up;
     btn.onmousedown = down; btn.onmouseup = up; btn.onmouseleave = up;
