@@ -334,10 +334,72 @@
     else { st.textContent = holding ? "감는 중..." : "릴을 감으세요!"; st.className = "meta"; }
   }
 
+  // 수면은 리그 안에서만 그린다. 조작 UI 및 게임 판정에는 영향을 주지 않는다.
+  var WATER_Y = 432;
+  var waterMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+  var waterFish = [
+    {x:70, y:459, speed:15, size:0.65, phase:0.2},
+    {x:314, y:488, speed:-11, size:0.85, phase:2.1},
+    {x:462, y:468, speed:-8, size:0.5, phase:4.3}
+  ];
+  function surfaceY(x, t){
+    return WATER_Y + Math.sin(x*0.025+t*0.7)*1.8 + Math.sin(x*0.059-t*0.4)*0.7;
+  }
+  function waterPath(ctx, t){
+    ctx.beginPath(); ctx.moveTo(0, surfaceY(0,t));
+    for(var x=8;x<=512;x+=8) ctx.lineTo(x,surfaceY(x,t));
+    ctx.lineTo(512,512); ctx.lineTo(0,512); ctx.closePath();
+  }
+  function drawWater(ctx, t){
+    ctx.save(); waterPath(ctx,t); ctx.clip();
+    var water = ctx.createLinearGradient(0,WATER_Y,0,512);
+    water.addColorStop(0,"rgba(38,113,122,.66)");
+    water.addColorStop(0.32,"rgba(23,79,94,.84)");
+    water.addColorStop(1,"rgba(16,49,67,.30)");
+    ctx.fillStyle=water; ctx.fillRect(0,WATER_Y-4,512,88);
+    // 희미한 실루엣만 지나가며, 별도의 물속 단면이나 바닥은 그리지 않는다.
+    waterFish.forEach(function(f){
+      var x=((f.x+t*f.speed+70)%652+652)%652-70;
+      var y=f.y+Math.sin(t*0.45+f.phase)*3;
+      var tail=Math.sin(t*3.4+f.phase)*4;
+      ctx.save(); ctx.translate(x,y); if(f.speed<0)ctx.scale(-1,1);
+      ctx.scale(f.size,f.size); ctx.fillStyle="rgba(3,24,37,.42)";
+      ctx.shadowColor="rgba(3,24,37,.2)";ctx.shadowBlur=3;
+      ctx.beginPath();ctx.moveTo(29,0);ctx.bezierCurveTo(12,-10,-6,-10,-21,tail*.3);
+      ctx.lineTo(-35,-10+tail);ctx.quadraticCurveTo(-29,tail,-35,10+tail);
+      ctx.lineTo(-21,tail*.3);ctx.bezierCurveTo(-6,10,12,10,29,0);ctx.fill();
+      ctx.beginPath();ctx.moveTo(3,-6);ctx.lineTo(-12,-15);ctx.lineTo(-9,-4);ctx.fill();ctx.restore();
+    });
+    // 반사가 그림자 위로 지나가도록 가장 나중에 겹친다.
+    for(var i=0;i<23;i++){
+      var rx=(i*113.7)%512+Math.sin(t*0.35+i)*7;
+      var ry=WATER_Y+6+(i*17.3)%73;
+      ctx.beginPath();ctx.moveTo(rx,ry);ctx.quadraticCurveTo(rx+10,ry+Math.sin(t*0.7+i)*1.4,rx+22,ry);
+      ctx.strokeStyle="rgba(138,210,209,"+(0.06+0.035*Math.sin(t*0.6+i))+")";
+      ctx.lineWidth=0.8;ctx.stroke();
+    }
+    ctx.restore();
+    ctx.save();ctx.beginPath();ctx.moveTo(0,surfaceY(0,t));
+    for(var sx=8;sx<=512;sx+=8)ctx.lineTo(sx,surfaceY(sx,t));
+    ctx.strokeStyle="rgba(142,221,218,.40)";ctx.lineWidth=1.4;ctx.stroke();ctx.restore();
+  }
+  function drawWaterContact(ctx, x, t, active){
+    ctx.save(); waterPath(ctx,t);ctx.clip();
+    for(var i=0;i<3;i++){
+      var p=(t*(active?1.25:0.55)+i/3)%1;
+      ctx.beginPath();ctx.ellipse(x,surfaceY(x,t)+3,4+p*(active?24:18),2+p*5,0,0,Math.PI*2);
+      ctx.strokeStyle="rgba(180,234,226,"+((1-p)*(active?0.48:0.30))+")";
+      ctx.lineWidth=1;ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   // 캔버스 리그 렌더 (512×512 좌표계). 릴 회전=감을 때, 물고기=진행도만큼 위로.
   function drawRig(dt){
     var ctx = rctx; if (!ctx) return;
     ctx.clearRect(0, 0, 512, 512);
+    var wt = waterMotion && waterMotion.matches ? 0 : gt;
+    drawWater(ctx,wt);
     if (holding && !over) spool += dt * 22; // 감는 중에만 릴 회전
 
     var ready = rig && rig.ready;
@@ -368,6 +430,13 @@
     } else {
       // 폴백(이미지 로딩 전): 간단한 줄만
       strokeLine(ctx, function(){ ctx.moveTo(tip[0],tip[1]); ctx.lineTo(hx,fishY); }, broken?"#c5d9e5":tcol, 3);
+    }
+
+    // 줄과 수면의 실제 교점. 바늘이 수면 위로 올라오거나 줄이 끊기면 파문도 없어진다.
+    var waterAt = surfaceY(hx,wt);
+    if(!broken && !gone && fishY >= waterAt && fishY > tip[1]){
+      var contactX=tip[0]+(hx-tip[0])*(waterAt-tip[1])/(fishY-tip[1]);
+      drawWaterContact(ctx,contactX,wt,struggle && !(waterMotion && waterMotion.matches));
     }
 
     // 물고기 이모지 (바늘 위치)
