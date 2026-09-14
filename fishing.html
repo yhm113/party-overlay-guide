@@ -145,8 +145,8 @@
   "use strict";
   var FN = "https://asia-northeast3-partyoverlay-786d6.cloudfunctions.net";
 
-  var TIER_EMOJI = { "쓰레기":"🗑","일반":"🐟","고급":"🐠","희귀":"💎","영웅":"🔥","전설":"🌟","신화":"🐉" };
-  var TIER_COLOR = { "쓰레기":"#9fb6cd","일반":"#8fd0ff","고급":"#5ad1c0","희귀":"#7ea6ff","영웅":"#ff9d5c","전설":"#ffd24a","신화":"#ff6fe0" };
+  var TIER_EMOJI = { "쓰레기":"🗑","일반":"🐟","고급":"🐠","희귀":"💎","영웅":"🔥","전설":"🌟","신화":"🐉","고대":"🦈" };
+  var TIER_COLOR = { "쓰레기":"#9fb6cd","일반":"#8fd0ff","고급":"#5ad1c0","희귀":"#7ea6ff","영웅":"#ff9d5c","전설":"#ffd24a","신화":"#ff6fe0","고대":"#3fd6c4" };
 
   function $(id){ return document.getElementById(id); }
   function show(id){ $(id).classList.remove("hidden"); }
@@ -272,6 +272,7 @@
     if (!over) {
       var strength = sess.strength || 0.5;     // 0~1 (물고기 힘)
       var rodPower = sess.rodPower || 1;        // 1~4 (낚싯대 성능)
+      var diff     = sess.diff || 1;            // 난이도 배수(희귀할수록↑)
       var reelFactor = 0.9 + rodPower * 0.06;   // 좋은 대일수록 조금 잘 감김
       var tenFactor  = 1.18 - rodPower * 0.08;  // 좋은 대일수록 장력 덜 오름
 
@@ -289,8 +290,8 @@
       if (holding) progress += (20 * reelFactor) * dt;
       else         progress -= 5 * dt;
 
-      // 장력: 물고기 힘 + 발악이 여기에 실림 (100%면 라인 끊김)
-      if (holding) tension += (18 + strength*34) * (struggle ? 2.3 : 1) * tenFactor * dt;
+      // 장력: 물고기 힘 + 발악 + 난이도배수가 여기에 실림 (100%면 라인 끊김)
+      if (holding) tension += (18 + strength*34) * (struggle ? 2.3 : 1) * tenFactor * diff * dt;
       else         tension -= 48 * dt;
 
       if (progress < 0) progress = 0;
@@ -394,18 +395,27 @@
 
     if (kind === "win") {
       var elapsed = (LIMIT - timeLeft);
-      // 대성공: 성공 시 10% 확률(운). 등급 2단계↑
-      var great = (Math.random() < 0.10);
-      var outcome = great ? "great" : "success";
-      $("resEmoji").textContent = great ? "🌟" : "🎉";
-      $("resHead").innerHTML = great
-        ? '<span class="good-c">대성공!!</span> 두 단계 위 물고기!'
-        : '<span class="good-c">성공!</span> 한 단계 위 물고기!';
-      $("resHead").className = "headline";
-      $("resDesc").textContent = great
-        ? "운까지 따랐다! 대박 손맛! (" + elapsed.toFixed(1) + "초)"
-        : "멋지게 낚아 올렸어요! (" + elapsed.toFixed(1) + "초)";
-      doResolve(outcome);
+      if (sess.targetTier === "고대") {
+        // 고대(메갈로돈): 대성공 없음, 등급 상승 없음 — 포획 그 자체가 잭팟
+        $("resEmoji").textContent = "🦈";
+        $("resHead").innerHTML = '<span class="good-c">메갈로돈 포획!!</span>';
+        $("resHead").className = "headline";
+        $("resDesc").textContent = "고대의 포식자를 제압했다! (" + elapsed.toFixed(1) + "초)";
+        doResolve("success");
+      } else {
+        // 대성공: 성공 시 10% 확률(운). 등급 2단계↑
+        var great = (Math.random() < 0.10);
+        var outcome = great ? "great" : "success";
+        $("resEmoji").textContent = great ? "🌟" : "🎉";
+        $("resHead").innerHTML = great
+          ? '<span class="good-c">대성공!!</span> 두 단계 위 물고기!'
+          : '<span class="good-c">성공!</span> 한 단계 위 물고기!';
+        $("resHead").className = "headline";
+        $("resDesc").textContent = great
+          ? "운까지 따랐다! 대박 손맛! (" + elapsed.toFixed(1) + "초)"
+          : "멋지게 낚아 올렸어요! (" + elapsed.toFixed(1) + "초)";
+        doResolve(outcome);
+      }
     } else {
       // 실패 (snap=라인끊김 / timeout=놓침)
       $("resEmoji").textContent = kind === "snap" ? "💥" : "🐟💨";
