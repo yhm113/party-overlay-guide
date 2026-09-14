@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>낚시 이벤트 관리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&display=swap">
+<style>
+  :root {
+    --bg:#0d1b2a; --bg2:#12293f; --panel:#16293d; --line:#294863;
+    --txt:#e8f0f8; --sub:#9fb6cd; --accent:#4fc3f7; --accent-dk:#1d7fb0;
+    --good:#45d17a; --warn:#f6c343; --bad:#ff5b5b;
+    --disp:"Jua","Malgun Gothic",sans-serif;
+    --body:-apple-system,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{background:radial-gradient(130% 90% at 50% -10%,#1a3a5c 0%,var(--bg) 60%);background-color:var(--bg);
+    color:var(--txt);font-family:var(--body);padding:22px 14px 60px}
+  .wrap{max-width:520px;margin:0 auto}
+  h1{font-family:var(--disp);font-weight:400;font-size:26px;margin:0 0 2px;text-align:center}
+  .lead{color:var(--sub);font-size:13px;text-align:center;margin:0 0 18px}
+  .card{background:linear-gradient(180deg,var(--bg2),var(--panel));border:1px solid var(--line);
+    border-radius:16px;padding:18px 16px;margin-bottom:14px;box-shadow:0 12px 34px rgba(0,0,0,.4)}
+  .card h2{font-size:14px;margin:0 0 12px;color:var(--accent);letter-spacing:.03em}
+  label{display:block;font-size:12px;color:var(--sub);margin:0 0 5px}
+  input[type=text],input[type=password],input[type=number],input[type=datetime-local]{
+    width:100%;background:#0c1b2b;border:1px solid var(--line);border-radius:9px;color:var(--txt);
+    font:inherit;padding:11px 12px;font-variant-numeric:tabular-nums}
+  input:focus{outline:2px solid var(--accent);outline-offset:1px}
+  .row{display:flex;gap:8px;align-items:flex-end}
+  .row>*{flex:1}
+  .btn{font-family:var(--disp);border:none;border-radius:11px;cursor:pointer;padding:13px 14px;font-size:15px}
+  .btn.primary{background:var(--accent);color:#06263a}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--sub);font-family:var(--body);font-size:13px;padding:9px 10px}
+  .btn.save{width:100%;padding:16px;font-size:18px;background:var(--good);color:#06281a}
+  .btn:disabled{opacity:.5;cursor:default}
+  .quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .quick .btn{flex:1 1 auto;min-width:70px}
+
+  /* 이벤트 행 */
+  .evt{display:flex;align-items:center;gap:12px;padding:12px 4px;border-top:1px solid var(--line)}
+  .evt:first-of-type{border-top:none}
+  .evt .info{flex:1}
+  .evt .title{font-size:15px}
+  .evt .desc{font-size:11.5px;color:var(--sub);margin-top:2px}
+  .evt .param{width:96px;flex:none}
+  .evt .param input{text-align:center}
+  .evt .unit{font-size:11px;color:var(--sub);text-align:center;margin-top:3px}
+
+  /* 스위치 */
+  .sw{position:relative;width:48px;height:28px;flex:none}
+  .sw input{opacity:0;width:0;height:0;position:absolute}
+  .sw span{position:absolute;inset:0;background:#28405a;border-radius:20px;transition:.15s;cursor:pointer}
+  .sw span::before{content:"";position:absolute;width:22px;height:22px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s}
+  .sw input:checked+span{background:var(--good)}
+  .sw input:checked+span::before{transform:translateX(20px)}
+
+  .master{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .master .title{font-family:var(--disp);font-size:18px}
+
+  #status{border-radius:12px;padding:13px 14px;font-size:13px;line-height:1.7;margin-bottom:14px;border:1px solid var(--line);background:#0c1b2b}
+  #status.on{border-color:var(--good);background:rgba(69,209,122,.10)}
+  #status.off{color:var(--sub)}
+  #msg{text-align:center;font-size:13px;min-height:18px;margin-top:10px}
+  .good-c{color:var(--good)}.bad-c{color:var(--bad)}.warn-c{color:var(--warn)}
+  .hint{color:var(--sub);font-size:11.5px;line-height:1.7;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎣 낚시 이벤트 관리</h1>
+  <p class="lead">기간을 정해 이벤트를 켜면 봇이 자동 적용·공지합니다.</p>
+
+  <div id="status" class="off">불러오는 중…</div>
+
+  <!-- 인증 -->
+  <div class="card">
+    <h2>🔑 관리자</h2>
+    <label for="pass">비밀번호</label>
+    <div class="row">
+      <input type="password" id="pass" placeholder="비밀번호" autocomplete="off" />
+      <button class="btn ghost" id="loadBtn" style="flex:0 0 auto">현재 설정 불러오기</button>
+    </div>
+    <div class="hint">비번은 저장할 때만 검증돼요. 브라우저에 남기지 마세요.</div>
+  </div>
+
+  <!-- 기간 -->
+  <div class="card">
+    <div class="master">
+      <span class="title">이벤트 기간</span>
+      <label class="sw"><input type="checkbox" id="windowOn"><span></span></label>
+    </div>
+    <div class="row">
+      <div><label for="startsAt">시작</label><input type="datetime-local" id="startsAt"></div>
+      <div><label for="endsAt">종료</label><input type="datetime-local" id="endsAt"></div>
+    </div>
+    <div class="quick">
+      <button class="btn ghost" data-h="1">지금+1시간</button>
+      <button class="btn ghost" data-h="3">+3시간</button>
+      <button class="btn ghost" data-h="6">+6시간</button>
+      <button class="btn ghost" data-h="24">+24시간</button>
+      <button class="btn ghost" id="midnight">오늘 자정까지</button>
+    </div>
+    <div class="hint">스위치가 꺼져 있으면 기간과 상관없이 이벤트가 비활성입니다.</div>
+  </div>
+
+  <!-- 효과 (다중 가능) -->
+  <div class="card">
+    <h2>🎁 효과 (여러 개 동시에 켜기 가능)</h2>
+
+    <div class="evt">
+      <label class="sw"><input type="checkbox" id="coinOn"><span></span></label>
+      <div class="info"><div class="title">💰 코인 배수</div><div class="desc">낚은 코인 × 배수</div></div>
+      <div class="param"><input type="number" id="coinMult" min="1" step="0.5" value="2"><div class="unit">배</div></div>
+    </div>
+
+    <div class="evt">
+      <label class="sw"><input type="checkbox" id="luckOn"><span></span></label>
+      <div class="info"><div class="title">🎣 대박 확률</div><div class="desc">희귀~고대 가중치 × 배수</div></div>
+      <div class="param"><input type="number" id="luckMult" min="1" step="0.5" value="2"><div class="unit">배</div></div>
+    </div>
+
+    <div class="evt">
+      <label class="sw"><input type="checkbox" id="cooldownOn"><span></span></label>
+      <div class="info"><div class="title">⏱ 쿨다운 단축</div><div class="desc">기본 20분 → 지정 분</div></div>
+      <div class="param"><input type="number" id="cooldownMin" min="1" step="1" value="5"><div class="unit">분</div></div>
+    </div>
+
+    <div class="evt">
+      <label class="sw"><input type="checkbox" id="minigameOn"><span></span></label>
+      <div class="info"><div class="title">🔥 손맛 확률</div><div class="desc">기본 10% → 지정 %</div></div>
+      <div class="param"><input type="number" id="minigameChance" min="0" max="100" step="5" value="30"><div class="unit">%</div></div>
+    </div>
+
+    <div class="evt">
+      <label class="sw"><input type="checkbox" id="megaOn"><span></span></label>
+      <div class="info"><div class="title">🦈 메갈로돈 확률</div><div class="desc">고대(메갈로돈) 가중치 × 배수</div></div>
+      <div class="param"><input type="number" id="megaMult" min="1" step="1" value="10"><div class="unit">배</div></div>
+    </div>
+  </div>
+
+  <button class="btn save" id="saveBtn">저장 (봇에 적용)</button>
+  <div id="msg"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var FN = "https://asia-northeast3-partyoverlay-786d6.cloudfunctions.net";
+  var $ = function(id){ return document.getElementById(id); };
+  function pad(n){ return ("0"+n).slice(-2); }
+  function toLocal(ms){ if(!ms) return ""; var d=new Date(ms); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes()); }
+  function fromLocal(v){ return v ? new Date(v).getTime() : 0; }
+  function msg(t,cls){ var m=$("msg"); m.textContent=t; m.className=cls||""; }
+
+  // ── 상태 배너 ──
+  function renderStatus(ev){
+    var box=$("status");
+    if(!ev || !ev.windowOn){ box.className="off"; box.textContent="⏸ 현재 진행 중인 이벤트 없음"; return; }
+    var now=Date.now(), active = (!ev.startsAt||now>=ev.startsAt) && (!ev.endsAt||now<=ev.endsAt);
+    var parts=[];
+    if(ev.coin&&ev.coin.on) parts.push("💰 코인 ×"+ev.coin.mult);
+    if(ev.luck&&ev.luck.on) parts.push("🎣 대박 ×"+ev.luck.mult);
+    if(ev.cooldown&&ev.cooldown.on) parts.push("⏱ 쿨다운 "+ev.cooldown.minutes+"분");
+    if(ev.minigame&&ev.minigame.on) parts.push("🔥 손맛 "+ev.minigame.chance+"%");
+    if(ev.mega&&ev.mega.on) parts.push("🦈 메갈로돈 ×"+ev.mega.mult);
+    var when = (ev.startsAt?toLocal(ev.startsAt).replace("T"," "):"?")+" ~ "+(ev.endsAt?toLocal(ev.endsAt).replace("T"," "):"?");
+    box.className = active?"on":"off";
+    box.innerHTML = (active?"🟢 <b>진행 중</b>":"🕓 예약/종료됨")+"<br>"+(parts.length?parts.join(" · "):"(효과 없음)")+"<br><span style='color:var(--sub)'>"+when+"</span>";
+  }
+
+  // ── 폼 채우기 ──
+  function fill(ev){
+    ev = ev || {};
+    $("windowOn").checked = !!ev.windowOn;
+    $("startsAt").value = toLocal(ev.startsAt);
+    $("endsAt").value = toLocal(ev.endsAt);
+    var set=function(k,onId,valId,valKey,def){ var s=ev[k]||{}; $(onId).checked=!!s.on; $(valId).value=(s[valKey]!=null?s[valKey]:def); };
+    set("coin","coinOn","coinMult","mult",2);
+    set("luck","luckOn","luckMult","mult",2);
+    set("cooldown","cooldownOn","cooldownMin","minutes",5);
+    set("minigame","minigameOn","minigameChance","chance",30);
+    set("mega","megaOn","megaMult","mult",10);
+    renderStatus(ev);
+  }
+
+  // ── 현재 설정 불러오기 ──
+  function load(){
+    msg("불러오는 중…");
+    fetch(FN+"/fishGetEvent").then(function(r){return r.json();}).then(function(d){
+      if(d&&d.ok){ fill(d.event||{}); msg("✅ 현재 설정을 불러왔어요.","good-c"); }
+      else msg("불러오기 실패: "+((d&&d.error)||"?"),"bad-c");
+    }).catch(function(){ msg("⚠️ 서버 연결 실패","bad-c"); });
+  }
+
+  // ── 저장 ──
+  function save(){
+    var pass=$("pass").value.trim();
+    if(!pass){ msg("비밀번호를 입력하세요.","bad-c"); $("pass").focus(); return; }
+    var config={
+      windowOn: $("windowOn").checked,
+      startsAt: fromLocal($("startsAt").value),
+      endsAt: fromLocal($("endsAt").value),
+      coin:     {on:$("coinOn").checked,     mult:Number($("coinMult").value)||1},
+      luck:     {on:$("luckOn").checked,     mult:Number($("luckMult").value)||1},
+      cooldown: {on:$("cooldownOn").checked, minutes:Number($("cooldownMin").value)||5},
+      minigame: {on:$("minigameOn").checked, chance:Number($("minigameChance").value)||0},
+      mega:     {on:$("megaOn").checked,     mult:Number($("megaMult").value)||1}
+    };
+    if(config.windowOn && config.startsAt && config.endsAt && config.endsAt<=config.startsAt){
+      msg("종료 시간이 시작보다 빠릅니다.","bad-c"); return;
+    }
+    $("saveBtn").disabled=true; msg("저장 중…");
+    fetch(FN+"/fishSetEvent",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pass:pass,config:config})})
+      .then(function(r){return r.json();}).then(function(d){
+        $("saveBtn").disabled=false;
+        if(d&&d.ok){ renderStatus(d.event); msg("✅ 저장 완료! 봇에 1분 내 반영됩니다.","good-c"); }
+        else msg("❌ "+((d&&d.error)||"저장 실패"),"bad-c");
+      }).catch(function(){ $("saveBtn").disabled=false; msg("⚠️ 서버 연결 실패","bad-c"); });
+  }
+
+  // 빠른 기간
+  document.querySelectorAll(".quick .btn[data-h]").forEach(function(b){
+    b.onclick=function(){ var h=+b.getAttribute("data-h"); var now=Date.now();
+      $("windowOn").checked=true; $("startsAt").value=toLocal(now); $("endsAt").value=toLocal(now+h*3600000); };
+  });
+  $("midnight").onclick=function(){ var now=new Date(); var end=new Date(now.getFullYear(),now.getMonth(),now.getDate(),23,59,0);
+    $("windowOn").checked=true; $("startsAt").value=toLocal(now.getTime()); $("endsAt").value=toLocal(end.getTime()); };
+
+  $("loadBtn").onclick=load;
+  $("saveBtn").onclick=save;
+  load(); // 열면 현재 상태 표시(저장은 비번 필요)
+})();
+</script>
+</body>
+</html>
