@@ -33,6 +33,8 @@
   h1 { font-family: var(--disp); font-size: 28px; font-weight: 400; margin: 0 0 4px; text-align: center; letter-spacing: .02em; }
   .sub { color: var(--sub); font-size: 13px; text-align: center; margin-bottom: 16px; line-height: 1.6; }
   .fishbox { text-align: center; margin: 8px 0 14px; }
+  .rig-wrap { text-align: center; margin: 2px 0 4px; }
+  #rig { width: 100%; max-width: 300px; height: auto; display: inline-block; }
   .fishemoji { font-size: 58px; line-height: 1; display: inline-block; filter: drop-shadow(0 6px 10px rgba(0,0,0,.4)); }
   .fishemoji.wiggle { animation: wig .45s ease-in-out infinite; }
   @keyframes wig { 0%,100%{transform:rotate(-9deg) translateX(-3px)} 50%{transform:rotate(9deg) translateX(3px)} }
@@ -114,10 +116,8 @@
 
     <!-- 게임 -->
     <div id="game" class="hidden">
-      <div class="fishbox">
-        <span class="fishemoji" id="gameEmoji">🐟</span>
-        <div class="meta" id="gameStatus">릴을 감으세요!</div>
-      </div>
+      <div class="rig-wrap"><canvas id="rig" width="512" height="512"></canvas></div>
+      <div class="meta" id="gameStatus" style="text-align:center;min-height:16px">릴을 감으세요!</div>
       <div class="gauge">
         <div class="lbl"><span>진행도</span><span id="progTxt">0%</span></div>
         <div class="bar"><div class="fill" id="progFill"></div></div>
@@ -184,24 +184,59 @@
     $("introTier").style.color = col;
     $("introMeta").textContent = "🎣 " + (sess.rodName || "낚싯대") +
       "  ·  물고기 힘 " + Math.round((sess.strength||0.5)*100) + "%";
+    loadRod(sess.rodName);   // 낚싯대 이미지 프리로드(인트로 읽는 동안)
     $("startBtn").onclick = function(){ hide("intro"); startGame(); };
+  }
+
+  // ── 낚싯대 리그(이미지 애니메이션) ──
+  var ROD_FOLDER = { "나무 낚싯대":"01","대나무 낚싯대":"02","카본 낚싯대":"03","강철 낚싯대":"04","은 낚싯대":"05","티타늄 낚싯대":"06","미스릴 낚싯대":"07","황금 낚싯대":"08","다이아 낚싯대":"09","용왕의 낚싯대":"10" };
+  var ROD_RIG = {
+    "01":{tip:[425.42,90.87],mount:[260.96,317.92],guides:[[236.31,285.98],[305.97,203.83],[373.85,137.52],[425.42,90.87]]},
+    "02":{tip:[429.68,84.24],mount:[199.94,364.43],guides:[[208.16,336.68],[263.14,236.39],[314.18,188.87],[365.15,139.07],[429.68,84.24]]},
+    "03":{tip:[436.12,69.00],mount:[228.94,366.30],guides:[[247.65,327.46],[310.95,202.97],[347.05,165.09],[386.44,120.71],[436.12,69.00]]},
+    "04":{tip:[432.55,79.43],mount:[222.87,367.84],guides:[[245.52,335.88],[343.52,174.15],[385.42,129.63],[415.32,99.69],[432.55,79.43]]},
+    "05":{tip:[435.39,83.63],mount:[206.20,363.06],guides:[[220.13,347.16],[332.91,189.84],[386.01,133.21],[435.39,83.63]]},
+    "06":{tip:[433.36,77.48],mount:[236.67,372.06],guides:[[263.17,332.81],[320.65,189.04],[372.50,136.95],[433.36,77.48]]},
+    "07":{tip:[437.27,74.68],mount:[213.35,365.03],guides:[[198.51,351.94],[271.06,245.13],[343.17,168.55],[396.80,115.87],[437.27,74.68]]},
+    "08":{tip:[438.21,65.53],mount:[220.44,343.10],guides:[[204.30,327.59],[298.86,215.43],[378.50,129.94],[405.17,103.78],[438.21,65.53]]},
+    "09":{tip:[435.37,75.94],mount:[227.88,315.78],guides:[[219.51,308.39],[277.39,222.38],[327.24,170.73],[367.59,129.83],[399.79,102.99],[435.37,75.94]]},
+    "10":{tip:[436.10,73.70],mount:[246.55,312.82],guides:[[229.41,302.63],[315.52,190.40],[354.76,149.77],[386.13,118.22],[412.07,93.40],[436.10,73.70]]}
+  };
+  var REEL_SCALE = 0.23, HOOK_SCALE = 0.12;
+  var rig = null; // {folder, body, hook, sheet, ready}
+  function loadImg(src){ return new Promise(function(res,rej){ var im=new Image(); im.onload=function(){res(im);}; im.onerror=rej; im.src=src; }); }
+  function loadRod(name){
+    var f = ROD_FOLDER[name] || "01";
+    rig = { folder:f, ready:false };
+    Promise.all([loadImg("img/rods/"+f+"/body.png"), loadImg("img/rods/"+f+"/hook.png"), loadImg("img/rods/"+f+"/reel.png")])
+      .then(function(a){ if(rig){ rig.body=a[0]; rig.hook=a[1]; rig.sheet=a[2]; rig.ready=true; } })
+      .catch(function(){ rig = null; }); // 실패 시 이모지 폴백
+  }
+  function strokeLine(ctx, path, color, w){
+    ctx.lineCap="round"; ctx.lineJoin="round";
+    ctx.beginPath(); path(); ctx.lineWidth=w+2; ctx.strokeStyle="rgba(10,21,34,.7)"; ctx.stroke();
+    ctx.beginPath(); path(); ctx.lineWidth=w; ctx.strokeStyle=color; ctx.stroke();
+  }
+  function tensionColor(t){
+    var f = (t-45)/55; if(f<0)f=0; if(f>1)f=1;
+    return "rgb(" + Math.round(197+(255-197)*f) + "," + Math.round(217+(91-217)*f) + "," + Math.round(229+(91-229)*f) + ")";
   }
 
   // ── 줄다리기 게임 ──
   var LIMIT = 24;            // 제한시간(초)
   var GRAB_SHOCK = 7;        // 새로 '확 잡아챌' 때마다 장력 순간 상승 → 막클릭 방지
   var progress, tension, holding, timeLeft, peakTension;
-  var struggle, struggleTimer;
-  var raf = null, lastT = 0, tStart = 0;
+  var struggle, struggleTimer, spool, over, gt;
+  var raf = null, lastT = 0, rctx = null;
 
   function startGame(){
     show("game");
     progress = 0; tension = 0; holding = false;
     timeLeft = LIMIT; peakTension = 0;
     struggle = false; struggleTimer = 0.8 + Math.random()*1.1; // 첫 발악까지 여유
-    tStart = Date.now();
-    $("gameEmoji").textContent = TIER_EMOJI[sess.targetTier] || "🐟";
+    spool = 0; over = null; gt = 0;
     $("attemptTxt").textContent = attempt + "/" + MAX_ATTEMPT;
+    if (!rctx) rctx = $("rig").getContext("2d");
     bindHold();
     lastT = performance.now();
     raf = requestAnimationFrame(loop);
@@ -210,7 +245,7 @@
   function bindHold(){
     var btn = $("hold");
     btn.disabled = false;
-    function down(e){ e.preventDefault(); if (!holding) { holding = true; tension += GRAB_SHOCK; } btn.classList.add("down"); }
+    function down(e){ e.preventDefault(); if (!over && !holding) { holding = true; tension += GRAB_SHOCK; } btn.classList.add("down"); }
     function up(e){ if(e) e.preventDefault(); holding = false; btn.classList.remove("down"); }
     btn.ontouchstart = down; btn.ontouchend = up; btn.ontouchcancel = up;
     btn.onmousedown = down; btn.onmouseup = up; btn.onmouseleave = up;
@@ -220,52 +255,54 @@
 
   function loop(now){
     var dt = Math.min(0.05, (now - lastT)/1000);
-    lastT = now;
+    lastT = now; gt += dt;
 
-    var strength = sess.strength || 0.5;     // 0~1 (물고기 힘)
-    var rodPower = sess.rodPower || 1;        // 1~4 (낚싯대 성능)
-    var reelFactor = 0.9 + rodPower * 0.06;   // 좋은 대일수록 조금 잘 감김
-    var tenFactor  = 1.18 - rodPower * 0.08;  // 좋은 대일수록 장력 덜 오름
+    if (!over) {
+      var strength = sess.strength || 0.5;     // 0~1 (물고기 힘)
+      var rodPower = sess.rodPower || 1;        // 1~4 (낚싯대 성능)
+      var reelFactor = 0.9 + rodPower * 0.06;   // 좋은 대일수록 조금 잘 감김
+      var tenFactor  = 1.18 - rodPower * 0.08;  // 좋은 대일수록 장력 덜 오름
 
-    // 발악(struggle) 스케줄링
-    struggleTimer -= dt;
-    if (!struggle && struggleTimer <= 0) {
-      struggle = true;
-      struggleTimer = 0.4 + Math.random()*0.5 + strength*0.6; // 발악 지속(힘↑=길게)
-    } else if (struggle && struggleTimer <= 0) {
-      struggle = false;
-      struggleTimer = (1.2 - strength*0.55) + Math.random()*1.0; // 다음 발악까지(힘↑=자주)
-    }
+      // 발악(struggle) 스케줄링
+      struggleTimer -= dt;
+      if (!struggle && struggleTimer <= 0) {
+        struggle = true;
+        struggleTimer = 0.4 + Math.random()*0.5 + strength*0.6; // 발악 지속(힘↑=길게)
+      } else if (struggle && struggleTimer <= 0) {
+        struggle = false;
+        struggleTimer = (1.2 - strength*0.55) + Math.random()*1.0; // 다음 발악까지(힘↑=자주)
+      }
 
-    // 진행도: 홀드하면 항상 쌓임(놓으면 소폭 감소). 난이도는 장력에 실림.
-    if (holding) {
-      progress += (20 * reelFactor) * dt;
+      // 진행도: 홀드하면 항상 쌓임(놓으면 소폭 감소). 난이도는 장력에 실림.
+      if (holding) progress += (20 * reelFactor) * dt;
+      else         progress -= 5 * dt;
+
+      // 장력: 물고기 힘 + 발악이 여기에 실림 (100%면 라인 끊김)
+      if (holding) tension += (18 + strength*34) * (struggle ? 2.3 : 1) * tenFactor * dt;
+      else         tension -= 48 * dt;
+
+      if (progress < 0) progress = 0;
+      if (progress > 100) progress = 100;
+      if (tension < 0) tension = 0;
+      if (tension > peakTension) peakTension = tension;
+      timeLeft -= dt;
+
+      // 판정 → 아웃트로 연출 시작(즉시 결과창 X)
+      if (tension >= 100)      over = { kind:"snap",    t:0 };
+      else if (timeLeft <= 0)  over = { kind:"timeout", t:0 };
+      else if (progress >= 100)over = { kind:"win",     t:0 };
+      if (over) { holding = false; $("hold").disabled = true; }
     } else {
-      progress -= 5 * dt;
+      over.t += dt;
     }
-
-    // 장력: 물고기 힘 + 발악이 여기에 실림 (100%면 라인 끊김)
-    if (holding) {
-      var rise = (18 + strength*34) * (struggle ? 2.3 : 1) * tenFactor;
-      tension += rise * dt;
-    } else {
-      tension -= 48 * dt;
-    }
-
-    if (progress < 0) progress = 0;
-    if (progress > 100) progress = 100;
-    if (tension < 0) tension = 0;
-    if (tension > peakTension) peakTension = tension;
-
-    timeLeft -= dt;
 
     render();
+    drawRig(dt);
 
-    // 판정
-    if (tension >= 100) { endGame("snap"); return; }
-    if (timeLeft <= 0)  { endGame("timeout"); return; }
-    if (progress >= 100){ endGame("win"); return; }
-
+    if (over) {
+      var dur = over.kind === "snap" ? 0.9 : 0.7;
+      if (over.t >= dur) { finishGame(over.kind); return; }
+    }
     raf = requestAnimationFrame(loop);
   }
 
@@ -275,12 +312,67 @@
     $("progTxt").textContent = Math.round(progress) + "%";
     $("tenTxt").textContent = Math.round(tension) + "%";
     $("timeTxt").textContent = Math.max(0, timeLeft).toFixed(1);
-    var emo = $("gameEmoji");
-    if (struggle) { emo.classList.add("wiggle"); $("gameStatus").textContent = "발악 중! 손 떼!"; $("gameStatus").className = "meta bad-c"; }
-    else { emo.classList.remove("wiggle"); $("gameStatus").textContent = holding ? "감는 중..." : "릴을 감으세요!"; $("gameStatus").className = "meta"; }
+    var st = $("gameStatus");
+    if (over) {
+      if (over.kind === "snap")      { st.textContent = "줄이 끊어졌다!"; st.className = "meta bad-c"; }
+      else if (over.kind === "timeout"){ st.textContent = "놓쳤다..."; st.className = "meta bad-c"; }
+      else                           { st.textContent = "낚았다!"; st.className = "meta good-c"; }
+    } else if (struggle) { st.textContent = "발악 중! 손 떼!"; st.className = "meta bad-c"; }
+    else { st.textContent = holding ? "감는 중..." : "릴을 감으세요!"; st.className = "meta"; }
   }
 
-  function endGame(kind){
+  // 캔버스 리그 렌더 (512×512 좌표계). 릴 회전=감을 때, 물고기=진행도만큼 위로.
+  function drawRig(dt){
+    var ctx = rctx; if (!ctx) return;
+    ctx.clearRect(0, 0, 512, 512);
+    if (holding && !over) spool += dt * 22; // 감는 중에만 릴 회전
+
+    var ready = rig && rig.ready;
+    var tip = ready ? ROD_RIG[rig.folder].tip : [430, 80];
+    var lowY = 486, topY = tip[1] + 52;
+    var fishY = lowY + (topY - lowY) * (progress / 100);
+    var sway = (struggle ? 6 : 2) * Math.sin(gt * (struggle ? 18 : 5));
+    var hx = tip[0] + sway;
+    var broken = false, gone = false, popped = false;
+    if (over) {
+      if (over.kind === "snap")        { broken = true; fishY = Math.min(560, fishY + over.t*over.t*420); hx = tip[0] - over.t*22; }
+      else if (over.kind === "timeout"){ gone = over.t > 0.5; fishY = Math.min(560, fishY + over.t*280); }
+      else                             { popped = true; fishY = topY - over.t*30; }
+    }
+
+    var tcol = tensionColor(tension);
+    if (ready) {
+      var r = ROD_RIG[rig.folder];
+      ctx.drawImage(rig.body, 0, 0, 512, 512);
+      strokeLine(ctx, function(){ for (var i=0;i<r.guides.length;i++){ var p=r.guides[i]; i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]); } }, "#c5d9e5", 3);
+      if (!broken) strokeLine(ctx, function(){ ctx.moveTo(tip[0],tip[1]); ctx.lineTo(hx,fishY); }, tcol, 3);
+      else strokeLine(ctx, function(){ ctx.moveTo(tip[0],tip[1]); ctx.bezierCurveTo(tip[0]+4, tip[1]+55, tip[0]-28*over.t, tip[1]+115, tip[0]-24*over.t, tip[1]+145); }, "#c5d9e5", 3);
+      var frame = ((Math.round(spool) % 32) + 32) % 32;
+      var sz = 512 * REEL_SCALE;
+      ctx.drawImage(rig.sheet, (frame%8)*512, Math.floor(frame/8)*512, 512, 512, r.mount[0]-sz/2, r.mount[1]-sz/2, sz, sz);
+      var hsz = 512 * HOOK_SCALE;
+      ctx.drawImage(rig.hook, hx-256*HOOK_SCALE, fishY-64*HOOK_SCALE, hsz, hsz);
+    } else {
+      // 폴백(이미지 로딩 전): 간단한 줄만
+      strokeLine(ctx, function(){ ctx.moveTo(tip[0],tip[1]); ctx.lineTo(hx,fishY); }, broken?"#c5d9e5":tcol, 3);
+    }
+
+    // 물고기 이모지 (바늘 위치)
+    if (!gone) {
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      var fe = TIER_EMOJI[sess.targetTier] || "🐟";
+      var scale = popped ? (1 + Math.min(0.5, over.t*0.9)) : 1;
+      var jit = struggle ? (Math.random()*4-2) : 0;
+      ctx.save();
+      ctx.translate(hx + jit, fishY + 20 + jit);
+      ctx.scale(scale, scale);
+      ctx.font = "46px serif";
+      ctx.fillText(fe, 0, 0);
+      ctx.restore();
+    }
+  }
+
+  function finishGame(kind){
     if (raf) cancelAnimationFrame(raf); raf = null;
     holding = false;
     $("hold").disabled = true;
