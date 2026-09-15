@@ -87,6 +87,15 @@
     <div class="hint">비번은 저장할 때만 검증돼요. 브라우저에 남기지 마세요.</div>
   </div>
 
+  <!-- 즉시 공지 -->
+  <div class="card">
+    <h2>📢 즉시 공지</h2>
+    <label for="notice">카톡방에 바로 보낼 공지</label>
+    <textarea id="notice" rows="3" placeholder="예) 오늘 저녁 8시 카브락 모임! 낚시 이벤트도 진행 중~" style="width:100%;background:#0c1b2b;border:1px solid var(--line);border-radius:9px;color:var(--txt);font:inherit;padding:11px 12px;resize:vertical"></textarea>
+    <button class="btn primary" id="noticeBtn" style="margin-top:10px">공지 보내기</button>
+    <div class="hint">봇이 1분 내 <b>마지막 활동 방</b>에 발송해요. (비번 필요)</div>
+  </div>
+
   <!-- 기간 -->
   <div class="card">
     <div class="master">
@@ -229,6 +238,22 @@
   });
   $("midnight").onclick=function(){ var now=new Date(); var end=new Date(now.getFullYear(),now.getMonth(),now.getDate(),23,59,0);
     $("windowOn").checked=true; $("startsAt").value=toLocal(now.getTime()); $("endsAt").value=toLocal(end.getTime()); };
+
+  // 즉시 공지
+  function sendNotice(){
+    var pass=$("pass").value.trim();
+    if(!pass){ msg("비밀번호를 입력하세요.","bad-c"); $("pass").focus(); return; }
+    var text=$("notice").value.trim();
+    if(!text){ msg("공지 내용을 입력하세요.","bad-c"); $("notice").focus(); return; }
+    $("noticeBtn").disabled=true; msg("공지 보내는 중…");
+    fetch(FN+"/fishSetNotice",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pass:pass,text:text})})
+      .then(function(r){return r.json();}).then(function(d){
+        $("noticeBtn").disabled=false;
+        if(d&&d.ok){ $("notice").value=""; msg("✅ 공지 발송! 봇이 1분 내 방에 올립니다.","good-c"); }
+        else msg("❌ "+((d&&d.error)||"발송 실패"),"bad-c");
+      }).catch(function(){ $("noticeBtn").disabled=false; msg("⚠️ 서버 연결 실패","bad-c"); });
+  }
+  $("noticeBtn").onclick=sendNotice;
 
   $("loadBtn").onclick=load;
   $("saveBtn").onclick=save;
