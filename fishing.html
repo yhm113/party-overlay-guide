@@ -325,13 +325,13 @@
       if (tension >= 100)      over = { kind:"snap",    t:0 };
       else if (timeLeft <= 0)  over = { kind:"timeout", t:0 };
       else if (progress >= 100)over = { kind:"win",     t:0 };
-      if (over) { holding = false; $("hold").disabled = true; }
+      if (over) { holding = false; $("hold").disabled = true; commitOutcome(over); }
     } else {
       over.t += dt;
     }
 
     render();
-    drawRig(dt);
+    try { drawRig(dt); } catch (e) {} // 렌더 오류가 게임/결과전송을 막지 않게 격리
 
     if (over) {
       var dur = over.kind === "snap" ? 0.9 : 0.7;
@@ -475,6 +475,18 @@
     }
   }
 
+  // 결과가 정해지는 즉시 서버로 전송(아웃트로/렌더와 무관하게 손실 방지)
+  function commitOutcome(o){
+    if (o.committed) return; o.committed = true;
+    if (o.kind === "win") {
+      o.great = (sess.targetTier !== "고대") && (Math.random() < 0.10);
+      doResolve(o.great ? "great" : "success");
+    } else if (attempt >= MAX_ATTEMPT) {
+      doResolve("fail"); // 최종 실패(재도전까지 소진)
+    }
+    // 1트 실패(attempt<MAX)는 재도전 대기 → 아직 전송 안 함
+  }
+
   function finishGame(kind){
     if (raf) cancelAnimationFrame(raf); raf = null;
     holding = false;
@@ -491,11 +503,10 @@
         $("resHead").innerHTML = '<span class="good-c">메갈로돈 포획!!</span>';
         $("resHead").className = "headline";
         $("resDesc").textContent = "고대의 포식자를 제압했다! (" + elapsed.toFixed(1) + "초)";
-        doResolve("success");
+        // 결과 전송은 commitOutcome 에서 이미 처리됨
       } else {
-        // 대성공: 성공 시 10% 확률(운). 등급 2단계↑
-        var great = (Math.random() < 0.10);
-        var outcome = great ? "great" : "success";
+        // 대성공 여부는 commitOutcome 에서 이미 결정됨
+        var great = over && over.great;
         $("resEmoji").textContent = great ? "🌟" : "🎉";
         $("resHead").innerHTML = great
           ? '<span class="good-c">대성공!!</span> 두 단계 위 물고기!'
@@ -504,7 +515,7 @@
         $("resDesc").textContent = great
           ? "운까지 따랐다! 대박 손맛! (" + elapsed.toFixed(1) + "초)"
           : "멋지게 낚아 올렸어요! (" + elapsed.toFixed(1) + "초)";
-        doResolve(outcome);
+        // 결과 전송은 commitOutcome 에서 이미 처리됨
       }
     } else {
       // 실패 (snap=라인끊김 / timeout=놓침)
@@ -526,7 +537,7 @@
         };
       } else {
         $("resDesc").textContent = "재도전까지 했지만 놓쳤어요. 미끼값이 차감돼요 ㅠ";
-        doResolve("fail");
+        // 결과 전송은 commitOutcome 에서 이미 처리됨
       }
     }
   }
