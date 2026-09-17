@@ -96,6 +96,19 @@
     <div class="hint">봇이 1분 내 <b>마지막 활동 방</b>에 발송해요. (비번 필요)</div>
   </div>
 
+  <!-- 코인 지급 -->
+  <div class="card">
+    <h2>🎁 코인 지급</h2>
+    <label for="grantNick">닉네임 (카톡 표시명 그대로)</label>
+    <input type="text" id="grantNick" placeholder="예) 김꼬리(운율) - 힐러" autocomplete="off" />
+    <div class="row" style="margin-top:10px">
+      <div><label for="grantAmount">금액(코인)</label><input type="number" id="grantAmount" step="100" placeholder="5000" /></div>
+      <div><label for="grantReason">사유(선택)</label><input type="text" id="grantReason" placeholder="오류 보상" /></div>
+    </div>
+    <button class="btn primary" id="grantBtn" style="margin-top:10px">지급하기</button>
+    <div class="hint">봇이 1분 내 해당 유저 코인에 반영 + 방에 공지. <b>닉네임은 정확히</b> 입력하세요(안 맞으면 새 유저로 생성됨). 음수 입력 시 차감.</div>
+  </div>
+
   <!-- 기간 -->
   <div class="card">
     <div class="master">
@@ -254,6 +267,25 @@
       }).catch(function(){ $("noticeBtn").disabled=false; msg("⚠️ 서버 연결 실패","bad-c"); });
   }
   $("noticeBtn").onclick=sendNotice;
+
+  // 코인 지급
+  function sendGrant(){
+    var pass=$("pass").value.trim();
+    if(!pass){ msg("비밀번호를 입력하세요.","bad-c"); $("pass").focus(); return; }
+    var nick=$("grantNick").value.trim();
+    var amount=Number($("grantAmount").value);
+    if(!nick){ msg("닉네임을 입력하세요.","bad-c"); $("grantNick").focus(); return; }
+    if(!amount){ msg("금액을 입력하세요.","bad-c"); $("grantAmount").focus(); return; }
+    var reason=$("grantReason").value.trim();
+    $("grantBtn").disabled=true; msg("지급 등록 중…");
+    fetch(FN+"/fishSetGrant",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pass:pass,nick:nick,amount:amount,reason:reason})})
+      .then(function(r){return r.json();}).then(function(d){
+        $("grantBtn").disabled=false;
+        if(d&&d.ok){ $("grantAmount").value=""; msg("✅ '"+nick+"' "+amount+"코인 지급 등록! 봇이 1분 내 반영.","good-c"); }
+        else msg("❌ "+((d&&d.error)||"지급 실패"),"bad-c");
+      }).catch(function(){ $("grantBtn").disabled=false; msg("⚠️ 서버 연결 실패","bad-c"); });
+  }
+  $("grantBtn").onclick=sendGrant;
 
   $("loadBtn").onclick=load;
   $("saveBtn").onclick=save;
