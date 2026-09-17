@@ -169,6 +169,7 @@
     .then(function(d){
       if (!d || !d.ok) { fail((d && d.error) || "세션을 불러오지 못했어요."); return; }
       if (d.status === "done") { fail("이미 끝난 대결이에요. 카톡에서 결과를 확인하세요!"); return; }
+      if (d.status === "playing") { fail("이미 시작된 대결이에요. 한 번 시작한 손맛은 다시 못 해요!"); return; }
       sess = d;
       initIntro();
     })
@@ -185,7 +186,21 @@
     $("introMeta").textContent = "🎣 " + (sess.rodName || "낚싯대") +
       "  ·  물고기 힘 " + Math.round((sess.strength||0.5)*100) + "%";
     loadRod();   // 낚싯대 이미지 프리로드(인트로 읽는 동안)
-    $("startBtn").onclick = function(){ hide("intro"); startGame(); };
+    // 시작할 때 세션 점유(pending→playing) → 재입장/타인 재플레이 차단
+    $("startBtn").onclick = function(){
+      var btn = $("startBtn");
+      btn.disabled = true; btn.textContent = "시작 중...";
+      fetch(FN + "/fishBegin", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({token:token}) })
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+          if (d && d.ok) { hide("intro"); startGame(); }
+          else { fail((d && d.error) || "이미 시작된 대결이에요."); }
+        })
+        .catch(function(){
+          // 네트워크 실패 시엔 막지 않고 진행(정상 유저 우선). 점유는 안 되지만 드문 경우.
+          hide("intro"); startGame();
+        });
+    };
   }
 
   // ── 낚싯대 리그(이미지 애니메이션) ──
