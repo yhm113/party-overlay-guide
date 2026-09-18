@@ -1,0 +1,317 @@
+<title>새우잡기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&display=swap">
+<style>
+  :root{
+    --bg:#0b2231; --panel:#123246; --line:#2b5570; --txt:#eaf4fb; --sub:#a8c4d6;
+    --accent:#4fc3f7; --gold:#ffcf3f; --good:#45d17a; --bad:#ff6b6b;
+    --disp:"Jua","Malgun Gothic",sans-serif; --body:-apple-system,"Malgun Gothic",sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:var(--body);overflow:hidden}
+  #wrap{position:relative;width:100vw;max-width:720px;margin:0 auto;height:100%;display:flex;flex-direction:column}
+  /* 게임 */
+  #stage{position:relative;flex:1;min-height:0;background:#0b2231}
+  #cv{display:block;width:100%;height:100%;touch-action:none}
+  /* 상단 HUD */
+  #hud{position:absolute;top:8px;left:8px;right:8px;display:flex;gap:8px;justify-content:space-between;pointer-events:none;font-variant-numeric:tabular-nums}
+  .pill{background:rgba(8,24,36,.72);border:1px solid var(--line);border-radius:12px;padding:7px 12px;font-size:15px;font-family:var(--disp)}
+  .pill b{color:var(--accent)} .pill.kg b{color:var(--good)} .pill.coin b{color:var(--gold)}
+  #timebar{position:absolute;top:44px;left:8px;right:8px;height:7px;background:rgba(8,24,36,.6);border-radius:6px;overflow:hidden}
+  #timefill{height:100%;width:100%;background:linear-gradient(90deg,var(--good),var(--gold) 60%,var(--bad));border-radius:6px}
+  /* 강화 바 */
+  #upg{display:flex;gap:6px;padding:8px;background:var(--panel);border-top:1px solid var(--line)}
+  .u{flex:1;background:#0e2636;border:1px solid var(--line);border-radius:11px;padding:8px 4px;text-align:center;cursor:pointer;transition:.1s}
+  .u:active{transform:scale(.94)}
+  .u.max{opacity:.55}
+  .u .ic{font-size:19px} .u .lv{font-size:12px;color:var(--sub);margin-top:1px}
+  .u .cost{font-size:11px;color:var(--gold);margin-top:2px}
+  .u.no{border-color:#3a2020}.u.no .cost{color:var(--bad)}
+  /* 오버레이 */
+  .ov{position:absolute;inset:0;background:rgba(6,18,28,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:22px;z-index:5}
+  .ov h1{font-family:var(--disp);font-weight:400;font-size:30px;margin:0 0 6px}
+  .ov p{color:var(--sub);font-size:14px;line-height:1.7;margin:4px 0}
+  .btn{font-family:var(--disp);font-size:20px;border:none;border-radius:16px;padding:16px 40px;margin-top:16px;cursor:pointer;background:linear-gradient(180deg,#7dd6ff,var(--accent));color:#06263a;box-shadow:0 6px 0 #1d7fb0}
+  .btn:active{transform:translateY(4px);box-shadow:0 2px 0 #1d7fb0}
+  .big{font-size:52px;margin:2px}
+  .rankrow{display:flex;justify-content:space-between;width:100%;max-width:320px;font-size:14px;padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.06)}
+  .rankrow b{color:var(--gold)} .rankrow.me{background:rgba(79,195,247,.14);border-radius:8px}
+  .spin{width:34px;height:34px;border:4px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite;margin:20px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .hidden{display:none!important}
+  .hint{color:var(--sub);font-size:12px;margin-top:8px;line-height:1.6}
+</style>
+
+<div id="wrap">
+  <div id="stage">
+    <canvas id="cv" width="960" height="600"></canvas>
+    <div id="hud">
+      <div class="pill">⏱ <b id="tTxt">60</b>s</div>
+      <div class="pill kg">⚖️ <b id="kgTxt">0.00</b>kg</div>
+      <div class="pill coin">🪙 <b id="coinTxt">0</b></div>
+    </div>
+    <div id="timebar"><div id="timefill"></div></div>
+
+    <!-- 로딩 -->
+    <div id="loading" class="ov"><div class="spin"></div><p>새우들 불러오는 중…</p></div>
+    <!-- 에러 -->
+    <div id="errbox" class="ov hidden"><div class="big">🦐</div><h1 id="errTitle">입장 불가</h1><p id="errMsg"></p></div>
+    <!-- 인트로 -->
+    <div id="intro" class="ov hidden">
+      <div class="big">🦐</div>
+      <h1>새우잡기!</h1>
+      <p id="introSub"></p>
+      <p class="hint">뜰채로 새우를 <b style="color:var(--txt)">탭</b>해서 잡으세요.<br>클수록 HP↑ · 이벤트코인으로 <b style="color:var(--gold)">뜰채 강화</b>!<br>🌟황금새우는 대박이니 놓치지 마셈</p>
+      <button class="btn" id="startBtn">시작하기</button>
+    </div>
+    <!-- 결과 -->
+    <div id="result" class="ov hidden">
+      <div class="big" id="resEmoji">🦐</div>
+      <h1 id="resTitle">끝!</h1>
+      <p id="resDesc"></p>
+      <div id="rankList" style="width:100%;max-width:320px;margin-top:10px"></div>
+      <p class="hint" id="resHint"></p>
+    </div>
+  </div>
+
+  <!-- 강화 바 -->
+  <div id="upg"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+var FN="https://asia-northeast3-partyoverlay-786d6.cloudfunctions.net";
+var $=function(id){return document.getElementById(id);};
+function qs(k){var m=location.search.match(new RegExp("[?&]"+k+"=([^&]+)"));return m?decodeURIComponent(m[1]):"";}
+var token=qs("t");
+
+// ── 데이터 ──
+var TYPES=[
+  {id:"jeot", name:"젓새우",  scale:0.40, kg:[0.01,0.03], hp:[1,2],  coin:1,  spawn:45, spd:[30,55]},
+  {id:"daeha",name:"대하",    scale:0.60, kg:[0.05,0.12], hp:[2,4],  coin:3,  spawn:30, spd:[45,75]},
+  {id:"bori", name:"보리새우",scale:0.78, kg:[0.2,0.5],   hp:[6,10], coin:10, spawn:15, spd:[60,95]},
+  {id:"dak",  name:"닭새우",  scale:0.92, kg:[0.8,1.8],   hp:[20,30],coin:40, spawn:8,  spd:[85,135]},
+  {id:"gold", name:"황금새우",scale:0.75, kg:[0.3,0.7],   hp:[10,14],coin:100,spawn:2,  spd:[105,155]}
+];
+var SPRITE_G=0.46; // 전체 크기 배수
+var UPG_DEF=[
+  {k:"atk",  ic:"⚔️", name:"공격력", cost:function(lv){return 20*(lv+1);}},
+  {k:"delay",ic:"⚡", name:"딜레이", cost:function(lv){return 30*(lv+1);}},
+  {k:"crit", ic:"💥", name:"크리",   cost:function(lv){return 40*(lv+1);}},
+  {k:"acc",  ic:"🎯", name:"정확도", cost:function(lv){return 25*(lv+1);}},
+  {k:"time", ic:"⏱", name:"시간",   cost:function(lv){return 35*(lv+1);}}
+];
+// 강화 효과
+function dmgOf(u){return 1+u.atk;}
+function cooldownOf(u){return 0.4-u.delay*0.03;}      // 초
+function critOf(u){return u.crit*0.03;}
+function accOf(u){return 0.5+u.acc*0.05;}
+function timeOf(u){return 60+u.time*6;}
+
+// ── 에셋 ──
+var IMG={}; var NEED=["bg","jeot","daeha","bori","dak","gold","net","splash","star"];
+function loadImg(name){return new Promise(function(res){var im=new Image();im.onload=function(){res(im);};im.onerror=function(){res(null);};im.src="img/shrimp/"+name+".png";});}
+
+// ── 상태 ──
+var cv=$("cv"), ctx=cv.getContext("2d"), W=960, H=600;
+var upg={atk:0,delay:0,crit:0,acc:0,time:0}, eventCoins=0, totalKg=0, playsLeft=0;
+var sessKg=0, sessCoin=0;   // 이번 판
+var shrimps=[], fx=[], gt=0, timeLeft=60, running=false, over=false, resolved=false;
+var lastTap=-1, netX=W/2, netY=H/2, netSwing=0;
+var spawnTimer=0;
+var MAX_ON=9, NET_R=70;
+
+function fail(t,m){ $("loading").classList.add("hidden"); $("intro").classList.add("hidden"); var e=$("errbox"); e.classList.remove("hidden"); $("errTitle").textContent=t; $("errMsg").textContent=m; }
+
+// 로드 → 인트로
+Promise.all(NEED.map(loadImg)).then(function(arr){
+  NEED.forEach(function(n,i){IMG[n]=arr[i];});
+  if(!token){ fail("잘못된 접속","카톡의 /새우 링크로 다시 들어와 주세요."); return; }
+  $("loading").classList.add("hidden");
+  $("intro").classList.remove("hidden");
+  $("introSub").textContent="60초 안에 최대한 잡아보자!";
+  buildUpgBar();
+  drawStatic();
+});
+
+$("startBtn").onclick=function(){
+  var b=$("startBtn"); b.disabled=true; b.textContent="시작 중...";
+  fetch(FN+"/shrimpBegin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:token})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d||!d.ok){ fail("시작 불가", (d&&d.error)||"이미 시작됐거나 만료된 판이에요."); return; }
+      upg=d.upgrades||upg; eventCoins=d.eventCoins||0; totalKg=d.totalKg||0; playsLeft=d.playsLeft||0;
+      $("intro").classList.add("hidden");
+      startGame();
+    })
+    .catch(function(){ b.disabled=false; b.textContent="시작하기"; fail("연결 실패","네트워크 확인 후 다시."); });
+};
+
+function startGame(){
+  timeLeft=timeOf(upg); sessKg=0; sessCoin=0; shrimps=[]; fx=[]; gt=0; over=false; resolved=false; running=true;
+  refreshUpgBar(); render();
+  last=performance.now(); requestAnimationFrame(loop);
+}
+
+// ── 강화 바 ──
+function buildUpgBar(){
+  var host=$("upg"); host.innerHTML="";
+  UPG_DEF.forEach(function(d){
+    var el=document.createElement("div"); el.className="u"; el.id="u_"+d.k;
+    el.innerHTML='<div class="ic">'+d.ic+'</div><div class="lv" id="ulv_'+d.k+'">Lv0</div><div class="cost" id="uc_'+d.k+'">'+d.cost(0)+'</div>';
+    el.onclick=function(){ buyUpg(d); };
+    host.appendChild(el);
+  });
+}
+function refreshUpgBar(){
+  UPG_DEF.forEach(function(d){
+    var lv=upg[d.k]||0, el=$("u_"+d.k);
+    $("ulv_"+d.k).textContent="Lv"+lv;
+    var maxed=lv>=10;
+    $("uc_"+d.k).textContent=maxed?"MAX":d.cost(lv);
+    el.className="u"+(maxed?" max":( (sessCoin+eventCoins)<d.cost(lv)?" no":"" ));
+  });
+}
+function buyUpg(d){
+  var lv=upg[d.k]||0; if(lv>=10) return;
+  var cost=d.cost(lv);
+  var pool=sessCoin+eventCoins;
+  if(pool<cost){ return; }
+  // 이번 판 코인 먼저 소진, 부족분은 보유코인
+  if(sessCoin>=cost){ sessCoin-=cost; } else { var rem=cost-sessCoin; sessCoin=0; eventCoins-=rem; }
+  upg[d.k]=lv+1;
+  if(d.k==="time" && running){ timeLeft+=6; } // 시간 강화 즉시 반영
+  refreshUpgBar();
+}
+
+// ── 스폰 ──
+function pickType(){ var t=0,i; for(i=0;i<TYPES.length;i++)t+=TYPES[i].spawn; var r=Math.random()*t; for(i=0;i<TYPES.length;i++){r-=TYPES[i].spawn; if(r<=0)return TYPES[i];} return TYPES[0]; }
+function spawn(){
+  var t=pickType(); var sv=0.85+Math.random()*0.30;
+  var kg=t.kg[0]+(t.kg[1]-t.kg[0])*(sv-0.85)/0.30;
+  var hp=Math.max(1,Math.round(t.hp[0]+(t.hp[1]-t.hp[0])*(sv-0.85)/0.30));
+  var size=512*t.scale*SPRITE_G*sv;
+  var dir=Math.random()<0.5?1:-1;
+  var y=150+Math.random()*(H-230);
+  shrimps.push({t:t, x: dir>0?-size:W+size, y:y, y0:y, dir:dir,
+    vx: dir*(t.spd[0]+Math.random()*(t.spd[1]-t.spd[0])), bob:Math.random()*6.28,
+    size:size, kg:kg, hp:hp, maxhp:hp, sv:sv, flash:0});
+}
+
+// ── 입력 ──
+function tapAt(px,py){
+  if(over||!running) return;
+  if(gt-lastTap < cooldownOf(upg)) return; // 딜레이 쿨
+  lastTap=gt; netX=px; netY=py; netSwing=0.14;
+  addFx("splash",px,py);
+  // 가장 가까운 사정거리 내 새우
+  var best=null,bd=1e9;
+  for(var i=0;i<shrimps.length;i++){ var s=shrimps[i]; var d=Math.hypot(s.x-px,s.y-py); if(d<NET_R+s.size*0.28 && d<bd){bd=d;best=s;} }
+  if(!best) return;
+  if(Math.random()>accOf(upg)) return; // 빗나감
+  var dmg=dmgOf(upg); var crit=Math.random()<critOf(upg); if(crit)dmg*=2;
+  best.hp-=dmg; best.flash=0.15;
+  if(best.hp<=0){
+    sessKg+=best.kg; sessCoin+=best.t.coin;
+    addFx("star",best.x,best.y);
+    best.dead=true;
+    render();
+  }
+}
+function evtXY(e){
+  var r=cv.getBoundingClientRect();
+  var cx=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+  var cy=(e.touches?e.touches[0].clientY:e.clientY)-r.top;
+  return [cx*(W/r.width), cy*(H/r.height)];
+}
+cv.addEventListener("touchstart",function(e){e.preventDefault();var p=evtXY(e);tapAt(p[0],p[1]);},{passive:false});
+cv.addEventListener("mousedown",function(e){var p=evtXY(e);tapAt(p[0],p[1]);});
+cv.addEventListener("mousemove",function(e){if(running&&!over){var p=evtXY(e);netX=p[0];netY=p[1];}});
+
+// ── 이펙트 ──
+function addFx(type,x,y){ fx.push({type:type,x:x,y:y,t:0}); }
+
+// ── 루프 ──
+var last=0;
+function loop(now){
+  var dt=Math.min(0.05,(now-last)/1000); last=now; gt+=dt;
+  if(!over){
+    timeLeft-=dt;
+    // 스폰
+    spawnTimer-=dt;
+    if(spawnTimer<=0 && shrimps.length<MAX_ON){ spawn(); spawnTimer=0.35+Math.random()*0.5; }
+    // 이동
+    for(var i=shrimps.length-1;i>=0;i--){
+      var s=shrimps[i];
+      s.x+=s.vx*dt; s.bob+=dt*3; s.y=s.y0+Math.sin(s.bob)*7;
+      if(s.flash>0)s.flash-=dt;
+      if(s.dead || s.x< -s.size-20 || s.x> W+s.size+20) shrimps.splice(i,1);
+    }
+    if(netSwing>0)netSwing-=dt;
+    if(timeLeft<=0){ timeLeft=0; over=true; finish(); }
+  }
+  // fx
+  for(var j=fx.length-1;j>=0;j--){ fx[j].t+=dt; if(fx[j].t>0.3)fx.splice(j,1); }
+  render();
+  if(!resolved) requestAnimationFrame(loop);
+}
+
+// ── 렌더 ──
+function drawSheet(img,frame,x,y,size,flip,alpha){
+  if(!img)return;
+  ctx.save(); ctx.globalAlpha=alpha==null?1:alpha; ctx.translate(x,y); if(flip)ctx.scale(-1,1);
+  ctx.drawImage(img, frame*512,0,512,512, -size/2,-size/2,size,size);
+  ctx.restore();
+}
+function drawStatic(){ render(); }
+function render(){
+  ctx.clearRect(0,0,W,H);
+  if(IMG.bg) ctx.drawImage(IMG.bg,0,0,W,H); else { ctx.fillStyle="#12405a"; ctx.fillRect(0,0,W,H); }
+  var frame=(Math.floor(gt/0.3)%2);
+  // 새우
+  for(var i=0;i<shrimps.length;i++){
+    var s=shrimps[i], img=IMG[s.t.id], flip=s.dir>0; // 원본 좌향 → 오른쪽 이동시 flip
+    if(s.t.id==="gold"){ ctx.save(); ctx.shadowColor="rgba(255,207,63,.8)"; ctx.shadowBlur=18; drawSheet(img,frame,s.x,s.y,s.size,flip); ctx.restore(); }
+    else drawSheet(img,frame,s.x,s.y,s.size,flip);
+    if(s.flash>0){ ctx.save(); ctx.globalAlpha=s.flash*3; ctx.globalCompositeOperation="lighter"; drawSheet(img,frame,s.x,s.y,s.size,flip,0.5); ctx.restore(); }
+    // HP바 (큰 새우만)
+    if(s.maxhp>3 && s.hp<s.maxhp){ var bw=s.size*0.45; ctx.fillStyle="rgba(0,0,0,.5)"; ctx.fillRect(s.x-bw/2,s.y-s.size*0.34,bw,5); ctx.fillStyle="#45d17a"; ctx.fillRect(s.x-bw/2,s.y-s.size*0.34,bw*(s.hp/s.maxhp),5); }
+  }
+  // 이펙트
+  for(var j=0;j<fx.length;j++){ var f=fx[j], fr=f.t<0.15?0:1, im=(f.type==="splash"?IMG.splash:IMG.star), sz=(f.type==="star"?120:90); drawSheet(im,fr,f.x,f.y,sz,false, 1-f.t*2.2); }
+  // 뜰채(커서)
+  if(running&&!over){ var nf=netSwing>0?1:0; drawSheet(IMG.net,nf,netX+18,netY+18,150,false); }
+  // HUD
+  $("tTxt").textContent=Math.ceil(timeLeft);
+  $("kgTxt").textContent=(totalKg+sessKg).toFixed(2);
+  $("coinTxt").textContent=(eventCoins+sessCoin);
+  $("timefill").style.width=(timeLeft/timeOf(upg)*100)+"%";
+}
+
+// ── 종료 → 저장 ──
+function finish(){
+  running=false;
+  fetch(FN+"/shrimpResolve",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({token:token, upgrades:upg, eventCoins:(eventCoins+sessCoin), kgGained:sessKg})})
+    .then(function(r){return r.json();})
+    .then(function(d){ resolved=true; showResult(d); })
+    .catch(function(){ resolved=true; showResult(null); });
+}
+function showResult(d){
+  $("result").classList.remove("hidden");
+  $("resEmoji").textContent = sessKg>=1?"🦞":"🦐";
+  $("resTitle").textContent = "이번 판 "+sessKg.toFixed(2)+"kg!";
+  $("resDesc").innerHTML = "🪙 이벤트코인 +"+sessCoin+" · 남은 판 "+playsLeft+"/5<br>누적 "+((d&&d.totalKg!=null)?d.totalKg:(totalKg+sessKg).toFixed(2))+"kg";
+  $("resHint").textContent = (d&&d.ok)?"✅ 저장 완료! 카톡 /새우 랭킹 확인":"⚠️ 저장 실패(네트워크). 새로고침 마셈";
+  loadRank();
+}
+function loadRank(){
+  fetch(FN+"/shrimpRank").then(function(r){return r.json();}).then(function(d){
+    if(!d||!d.ok)return; var rk=d.rank||[]; var h=$("rankList"); h.innerHTML="<div class='rankrow'><b>🏆 kg 랭킹</b><span></span></div>";
+    for(var i=0;i<Math.min(8,rk.length);i++){ var row=document.createElement("div"); row.className="rankrow"; row.innerHTML="<span>"+(i+1)+". "+rk[i].nick+"</span><b>"+rk[i].kg+"kg</b>"; h.appendChild(row); }
+  }).catch(function(){});
+}
+})();
+</script>
