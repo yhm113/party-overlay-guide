@@ -184,6 +184,7 @@
     $("introTier").textContent = "[" + sess.targetTier + "] " + (sess.targetFish || "?");
     $("introTier").style.color = col;
     $("introMeta").textContent = "🎣 " + (sess.rodName || "낚싯대") +
+      (sess.lineName ? "  ·  🧵 " + sess.lineName : "") +
       "  ·  물고기 힘 " + Math.round((sess.strength||0.5)*100) + "%";
     loadRod();   // 낚싯대 이미지 프리로드(인트로 읽는 동안)
     // 시작할 때 세션 점유(pending→playing) → 재입장/타인 재플레이 차단
@@ -294,6 +295,7 @@
       var strength = sess.strength || 0.5;     // 0~1 (물고기 힘)
       var rodPower = sess.rodPower || 1;        // 1~4 (낚싯대 성능)
       var diff     = sess.diff || 1;            // 난이도 배수(희귀할수록↑)
+      var lineF    = sess.lineFactor || 1;      // 🧵 낚싯줄: 장력 저항(낮을수록 잘 안 끊김)
       var reelFactor = 0.9 + rodPower * 0.06;   // 좋은 대일수록 조금 잘 감김
       var tenFactor  = 1.18 - rodPower * 0.08;  // 좋은 대일수록 장력 덜 오름
 
@@ -312,7 +314,7 @@
       else         progress -= 5 * dt;
 
       // 장력: 물고기 힘 + 발악 + 난이도배수가 여기에 실림 (100%면 라인 끊김)
-      if (holding) tension += (18 + strength*34) * (struggle ? 2.3 : 1) * tenFactor * diff * dt;
+      if (holding) tension += (18 + strength*34) * (struggle ? 2.3 : 1) * tenFactor * diff * lineF * dt;
       else         tension -= 48 * dt;
 
       if (progress < 0) progress = 0;
