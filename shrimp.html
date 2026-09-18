@@ -10,9 +10,10 @@
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:var(--body);overflow:hidden}
-  #wrap{display:flex;flex-direction:row;width:100vw;height:100%}
+  #wrap{width:100vw;height:100vh;height:100dvh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  #game{display:flex;flex-direction:row;width:100%}
   /* 왼쪽 랭킹 패널 */
-  #leftrank{width:84px;flex:none;height:100%;background:var(--panel);border-right:1px solid var(--line);padding:6px 4px;overflow-y:auto}
+  #leftrank{width:clamp(52px,13vw,86px);flex:none;height:100%;background:var(--panel);border-right:1px solid var(--line);padding:6px 4px;overflow-y:auto}
   .lrtitle{font-family:var(--disp);font-size:13px;text-align:center;color:var(--gold);margin-bottom:6px}
   .lrrow{font-size:11px;color:var(--sub);padding:3px 1px;border-bottom:1px solid rgba(255,255,255,.05);line-height:1.35}
   .lrrow .n{color:var(--txt);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -26,7 +27,7 @@
   #timebar{position:absolute;top:8px;right:8px;left:8px;top:42px;height:6px;background:rgba(8,24,36,.6);border-radius:6px;overflow:hidden;z-index:2}
   #timefill{height:100%;width:100%;background:linear-gradient(90deg,var(--good),var(--gold) 60%,var(--bad))}
   /* 오른쪽 세로 패널 */
-  #side{width:84px;flex:none;height:100%;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;padding:6px}
+  #side{width:clamp(56px,14vw,86px);flex:none;height:100%;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;padding:6px}
   #sideCoin{font-family:var(--disp);font-size:14px;text-align:center;color:var(--gold);background:#0e2636;border:1px solid var(--line);border-radius:10px;padding:7px 2px;margin-bottom:6px}
   #sideCoin small{display:block;font-size:10px;color:var(--sub);font-family:var(--body)}
   #upg{flex:1;display:flex;flex-direction:column;gap:5px;overflow-y:auto}
@@ -36,7 +37,7 @@
   .u .ic{font-size:18px} .u .lv{font-size:11px;color:var(--sub)} .u .cost{font-size:11px;color:var(--gold)}
   .u.no{border-color:#4a2626}.u.no .cost{color:var(--bad)}
   /* 오버레이 */
-  .ov{position:absolute;inset:0;background:rgba(6,18,28,.93);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;z-index:5}
+  .ov{position:absolute;inset:0;background:rgba(6,18,28,.93);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:16px;z-index:5;overflow-y:auto}
   .ov h1{font-family:var(--disp);font-weight:400;font-size:28px;margin:0 0 6px}
   .ov p{color:var(--sub);font-size:13px;line-height:1.7;margin:3px 0}
   .btn{font-family:var(--disp);font-size:20px;border:none;border-radius:16px;padding:15px 38px;margin-top:14px;cursor:pointer;background:linear-gradient(180deg,#7dd6ff,var(--accent));color:#06263a;box-shadow:0 6px 0 #1d7fb0}
@@ -50,7 +51,7 @@
   .hint{color:var(--sub);font-size:12px;margin-top:8px;line-height:1.6}
 </style>
 
-<div id="wrap">
+<div id="wrap"><div id="game">
   <div id="leftrank">
     <div class="lrtitle">🏆 랭킹</div>
     <div id="lrlist"></div>
@@ -83,7 +84,7 @@
     <div id="sideCoin">🪙<b id="coinTxt">0</b><small>이벤트코인</small></div>
     <div id="upg"></div>
   </div>
-</div>
+</div></div>
 
 <script>
 (function(){
@@ -122,18 +123,24 @@ var cv=$("cv"), ctx=cv.getContext("2d"), W=960, H=600;
 var upg={atk:0,delay:0,crit:0,acc:0,time:0,detect:0}, eventCoins=0, totalKg=0, playsLeft=0;
 var sessKg=0, sessCoin=0;
 var shrimps=[], fx=[], gt=0, timeLeft=60, running=false, over=false, resolved=false;
-var lastTap=-1, netX=W/2, netY=H/2, netSwing=0, spawnTimer=0, catchBanner=null;
+var lastTap=-1, netX=W/2, netY=H/2, netSwing=0, spawnTimer=0, catchBanner=null, floaters=[];
+function addFloater(text,x,y,color){ floaters.push({text:text,x:x,y:y,t:0,color:color||"#ff6b6b"}); }
 var NET_R=70;
 
 function fail(t,m){ ["loading","intro"].forEach(function(i){$(i).classList.add("hidden");}); var e=$("errbox"); e.classList.remove("hidden"); $("errTitle").textContent=t; $("errMsg").textContent=m; }
 
-// 캔버스 크기(8:5 유지, 스테이지에 맞춤)
+// 캔버스 크기(8:5 유지) — 뷰포트에서 패널 폭 뺀 공간에 맞추고 #game 높이=캔버스 높이(패널도 그 높이, 중앙정렬)
 function resizeCanvas(){
-  var st=$("stage"), aw=st.clientWidth, ah=st.clientHeight, ar=W/H;
-  var w=aw, h=w/ar; if(h>ah){ h=ah; w=h*ar; }
-  cv.style.width=Math.floor(w)+"px"; cv.style.height=Math.floor(h)+"px";
+  var vw=document.documentElement.clientWidth||window.innerWidth;
+  var vh=window.innerHeight, ar=W/H;
+  var pw=$("leftrank").offsetWidth+$("side").offsetWidth;
+  var availW=Math.max(140,vw-pw);
+  var cw=availW, ch=cw/ar; if(ch>vh){ ch=vh; cw=ch*ar; }
+  cv.style.width=Math.floor(cw)+"px"; cv.style.height=Math.floor(ch)+"px";
+  $("game").style.height=Math.floor(ch)+"px";
 }
 window.addEventListener("resize",function(){resizeCanvas();render();});
+window.addEventListener("orientationchange",function(){setTimeout(function(){resizeCanvas();render();},200);});
 
 Promise.all(NEED.map(loadImg)).then(function(arr){
   NEED.forEach(function(n,i){IMG[n]=arr[i];});
@@ -220,9 +227,10 @@ function tapAt(px,py){
   var best=null,bd=1e9;
   for(var i=0;i<shrimps.length;i++){ var s=shrimps[i]; var d=Math.hypot(s.x-px,s.y-py); if(d<NET_R+s.size*0.28&&d<bd){bd=d;best=s;} }
   if(!best) return;
-  if(Math.random()>accOf(upg)) return;
-  var dmg=dmgOf(upg); if(Math.random()<critOf(upg))dmg*=2;
+  if(Math.random()>accOf(upg)){ addFloater("MISS", netX, netY-30, "#ff6b6b"); return; }
+  var dmg=dmgOf(upg); var isCrit=Math.random()<critOf(upg); if(isCrit)dmg*=2;
   best.hp-=dmg; best.flash=0.15;
+  if(isCrit) addFloater("CRIT!", netX, netY-30, "#ffcf3f");
   if(best.hp<=0){
     sessKg+=best.kg; sessCoin+=best.t.coin; best.dead=true;
     addFx("star",best.x,best.y);
@@ -249,6 +257,7 @@ function loop(now){
     if(timeLeft<=0){ timeLeft=0; over=true; finish(); }
   }
   for(var j=fx.length-1;j>=0;j--){ fx[j].t+=dt; if(fx[j].t>0.3)fx.splice(j,1); }
+  for(var k=floaters.length-1;k>=0;k--){ floaters[k].t+=dt; if(floaters[k].t>0.8)floaters.splice(k,1); }
   if(catchBanner){ catchBanner.t+=dt; if(catchBanner.t>1.4)catchBanner=null; }
   render();
   if(!resolved) requestAnimationFrame(loop);
@@ -275,6 +284,10 @@ function render(){
   if(running&&!over){ var nf=netSwing>0?1:0; drawSheet(IMG.net,nf,netX+13,netY+13,75,false); }
   // 이펙트 — 뜰채 앞(위)
   for(var j=0;j<fx.length;j++){ var f=fx[j], fr=f.t<0.15?0:1, im=(f.type==="splash"?IMG.splash:IMG.star), sz=(f.type==="star"?156:117); drawSheet(im,fr,f.x,f.y,sz,false,1-f.t*2.2); }
+  // 플로팅 텍스트(MISS/CRIT) — 위로 떠오르며 사라짐
+  for(var k=0;k<floaters.length;k++){ var fl=floaters[k], fa=1-fl.t/0.8; ctx.save(); ctx.globalAlpha=Math.max(0,fa);
+    ctx.font="bold 34px Jua, sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.lineWidth=6; ctx.strokeStyle="rgba(0,0,0,.55)"; ctx.fillStyle=fl.color;
+    var fy=fl.y-fl.t*70; ctx.strokeText(fl.text,fl.x,fy); ctx.fillText(fl.text,fl.x,fy); ctx.restore(); }
   // 잡은 새우 상단중앙 표기
   if(catchBanner){ var a=catchBanner.t<1?1:(1.4-catchBanner.t)/0.4; ctx.save(); ctx.globalAlpha=Math.max(0,a);
     drawSheet(IMG[catchBanner.id],frame,W/2-46,70,78,true);
