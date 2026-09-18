@@ -69,7 +69,7 @@
     <div id="intro" class="ov hidden">
       <div class="big">🦐</div><h1>새우잡기!</h1>
       <p id="introSub"></p>
-      <p class="hint">뜰채로 새우를 <b style="color:var(--txt)">탭</b>해서 잡으세요.<br>클수록 HP↑ · 이벤트코인으로 <b style="color:var(--gold)">뜰채 강화</b>(오른쪽)<br>🌟황금새우는 대박! · 🔍탐지 올리면 큰 새우 잘 나옴</p>
+      <p class="hint"><b style="color:var(--txt)">탭·드래그</b>로 새우를 잡으세요 (뜰채는 손가락 <b style="color:var(--txt)">위쪽</b>에 떠서 새우 안 가림)<br>클수록 HP↑ · 이벤트코인으로 <b style="color:var(--gold)">뜰채 강화</b>(오른쪽)<br>🌟황금새우는 대박! · 🔍탐지 올리면 큰 새우 잘 나옴<br>📱 <b style="color:var(--txt)">가로로 돌리면</b> 화면 꽉 참</p>
       <button class="btn" id="startBtn">시작하기</button>
     </div>
     <div id="result" class="ov hidden">
@@ -239,7 +239,10 @@ function tapAt(px,py){
   }
 }
 function evtXY(e){ var r=cv.getBoundingClientRect(); var cx=(e.touches?e.touches[0].clientX:e.clientX)-r.left, cy=(e.touches?e.touches[0].clientY:e.clientY)-r.top; return [cx*(W/r.width), cy*(H/r.height)]; }
-cv.addEventListener("touchstart",function(e){e.preventDefault();var p=evtXY(e);tapAt(p[0],p[1]);},{passive:false});
+// 📱 손가락 가림 방지: 터치는 실제 지점보다 위쪽에서 잡히게(뜰채가 손가락 위에 뜸)
+function toff(){ return 70*(W/(cv.clientWidth||W)); }
+cv.addEventListener("touchstart",function(e){e.preventDefault();var p=evtXY(e);tapAt(p[0],p[1]-toff());},{passive:false});
+cv.addEventListener("touchmove",function(e){e.preventDefault();var p=evtXY(e);tapAt(p[0],p[1]-toff());},{passive:false}); // 드래그로 훑어잡기
 cv.addEventListener("mousedown",function(e){var p=evtXY(e);tapAt(p[0],p[1]);});
 cv.addEventListener("mousemove",function(e){if(running&&!over){var p=evtXY(e);netX=p[0];netY=p[1];}});
 
