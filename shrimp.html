@@ -302,6 +302,12 @@ function render(){
   $("timefill").style.width=(timeLeft/timeOf(upg)*100)+"%";
 }
 
+// 창 닫기/이탈 시에도 현재 진행분 저장(60초 못 채워도 코인·kg 유실 방지)
+window.addEventListener("pagehide",function(){
+  if(running && !resolved){ resolved=true;
+    try{ navigator.sendBeacon(FN+"/shrimpResolve", new Blob([JSON.stringify({token:token,upgrades:upg,eventCoins:(eventCoins+sessCoin),kgGained:sessKg})],{type:"application/json"})); }catch(e){}
+  }
+});
 function finish(){
   running=false;
   fetch(FN+"/shrimpResolve",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:token,upgrades:upg,eventCoins:(eventCoins+sessCoin),kgGained:sessKg})})
