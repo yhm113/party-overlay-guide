@@ -99,7 +99,7 @@ var TYPES=[
   {id:"daeha",name:"대하",    scale:0.60, kg:[0.05,0.12], hp:[2,4],  coin:3,  spawn:30, spd:[45,75]},
   {id:"bori", name:"보리새우",scale:0.78, kg:[0.2,0.5],   hp:[6,10], coin:10, spawn:15, spd:[60,95]},
   {id:"dak",  name:"닭새우",  scale:0.92, kg:[0.8,1.8],   hp:[20,30],coin:40, spawn:8,  spd:[85,135]},
-  {id:"gold", name:"황금새우",scale:0.75, kg:[0.3,0.7],   hp:[10,14],coin:100,spawn:2,  spd:[105,155]}
+  {id:"gold", name:"황금새우",scale:0.75, kg:[0.3,0.7],   hp:[10,14],coin:100,spawn:2,  spd:[85,120]}
 ];
 var SPRITE_G=0.46;
 var UPG_DEF=[
@@ -111,7 +111,7 @@ var UPG_DEF=[
   {k:"detect",ic:"🔍",cost:function(lv){return 30*(lv+1);}}
 ];
 function dmgOf(u){return 1+u.atk;}
-function cooldownOf(u){return 0.4-u.delay*0.03;}
+function cooldownOf(u){return 0.35-u.delay*0.025;}
 function critOf(u){return u.crit*0.03;}
 function accOf(u){return 0.5+u.acc*0.05;}
 function timeOf(u){return 60+u.time*6;}
@@ -125,7 +125,7 @@ var sessKg=0, sessCoin=0;
 var shrimps=[], fx=[], gt=0, timeLeft=60, running=false, over=false, resolved=false;
 var lastTap=-1, netX=W/2, netY=H/2, netSwing=0, spawnTimer=0, catchBanner=null, floaters=[];
 function addFloater(text,x,y,color){ floaters.push({text:text,x:x,y:y,t:0,color:color||"#ff6b6b"}); }
-var NET_R=70;
+var NET_R=80;
 
 function fail(t,m){ ["loading","intro"].forEach(function(i){$(i).classList.add("hidden");}); var e=$("errbox"); e.classList.remove("hidden"); $("errTitle").textContent=t; $("errMsg").textContent=m; }
 
@@ -217,7 +217,7 @@ function spawn(){
   var kg=t.kg[0]+(t.kg[1]-t.kg[0])*f;
   var hp=Math.max(1,Math.round(t.hp[0]+(t.hp[1]-t.hp[0])*f));
   var size=512*t.scale*SPRITE_G*sv, dir=Math.random()<0.5?1:-1, y=150+Math.random()*(H-230);
-  shrimps.push({t:t,x:dir>0?-size:W+size,y:y,y0:y,dir:dir,vx:dir*(t.spd[0]+Math.random()*(t.spd[1]-t.spd[0])),bob:Math.random()*6.28,size:size,kg:kg,hp:hp,maxhp:hp,flash:0});
+  shrimps.push({t:t,x:dir>0?-size:W+size,y:y,y0:y,dir:dir,vx:dir*(t.spd[0]+Math.random()*(t.spd[1]-t.spd[0])),bob:Math.random()*6.28,size:size,kg:kg,hp:hp,maxhp:hp,flash:0,accBonus:(t.scale-0.4)*0.55});
 }
 
 function tapAt(px,py){
@@ -227,7 +227,7 @@ function tapAt(px,py){
   var best=null,bd=1e9;
   for(var i=0;i<shrimps.length;i++){ var s=shrimps[i]; var d=Math.hypot(s.x-px,s.y-py); if(d<NET_R+s.size*0.28&&d<bd){bd=d;best=s;} }
   if(!best) return;
-  if(Math.random()>accOf(upg)){ addFloater("MISS", netX, netY-30, "#ff6b6b"); return; }
+  if(Math.random()>Math.min(0.98,accOf(upg)+best.accBonus)){ addFloater("MISS", netX, netY-30, "#ff6b6b"); return; } // 큰 새우일수록 잘 맞음
   var dmg=dmgOf(upg); var isCrit=Math.random()<critOf(upg); if(isCrit)dmg*=2;
   best.hp-=dmg; best.flash=0.15;
   if(isCrit) addFloater("CRIT!", netX, netY-30, "#ffcf3f");
@@ -312,7 +312,7 @@ function showResult(d){
   $("result").classList.remove("hidden");
   $("resEmoji").textContent=sessKg>=1?"🦞":"🦐";
   $("resTitle").textContent="이번 판 "+sessKg.toFixed(2)+"kg!";
-  $("resDesc").innerHTML="🪙 이벤트코인 +"+sessCoin+" · 남은 판 "+playsLeft+"/5<br>누적 "+((d&&d.totalKg!=null)?d.totalKg:(totalKg+sessKg).toFixed(2))+"kg";
+  $("resDesc").innerHTML="🪙 이벤트코인 +"+sessCoin+" · 남은 판 "+playsLeft+"/3<br>누적 "+((d&&d.totalKg!=null)?d.totalKg:(totalKg+sessKg).toFixed(2))+"kg";
   $("resHint").textContent=(d&&d.ok)?"✅ 저장 완료! 카톡 /새우 랭킹 확인":"⚠️ 저장 실패(네트워크)";
   loadRank(); loadLeftRank();
 }
