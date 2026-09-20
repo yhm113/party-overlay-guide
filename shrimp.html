@@ -302,24 +302,22 @@ function render(){
   $("timefill").style.width=(timeLeft/timeOf(upg)*100)+"%";
 }
 
-// 창 닫기/이탈 시에도 현재 진행분 저장(60초 못 채워도 코인·kg 유실 방지)
-window.addEventListener("pagehide",function(){
-  if(running && !resolved){ resolved=true;
-    try{ navigator.sendBeacon(FN+"/shrimpResolve", new Blob([JSON.stringify({token:token,upgrades:upg,eventCoins:(eventCoins+sessCoin),kgGained:sessKg})],{type:"application/json"})); }catch(e){}
-  }
-});
-function finish(){
-  running=false;
-  fetch(FN+"/shrimpResolve",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:token,upgrades:upg,eventCoins:(eventCoins+sessCoin),kgGained:sessKg})})
-    .then(function(r){return r.json();}).then(function(d){ resolved=true; showResult(d); })
-    .catch(function(){ resolved=true; showResult(null); });
+function finish(){ running=false; over=true; showResult(undefined); saveResolve(0); }
+// 결과 저장 — 실패(콜드스타트/네트워크) 시 재시도해서 유실 방지
+function saveResolve(attempt){
+  fetch(FN+"/shrimpResolve",{method:"POST",headers:{"Content-Type":"application/json"},keepalive:true,
+    body:JSON.stringify({token:token,upgrades:upg,eventCoins:(eventCoins+sessCoin),kgGained:sessKg})})
+    .then(function(r){return r.json();})
+    .then(function(d){ if(d&&(d.ok||d.already)){ resolved=true; showResult(d); } else if(attempt<4){ setTimeout(function(){saveResolve(attempt+1);},700*(attempt+1)); } else { resolved=true; showResult(d); } })
+    .catch(function(){ if(attempt<4){ setTimeout(function(){saveResolve(attempt+1);},700*(attempt+1)); } else { resolved=true; showResult(null); } });
 }
 function showResult(d){
   $("result").classList.remove("hidden");
   $("resEmoji").textContent=sessKg>=1?"🦞":"🦐";
   $("resTitle").textContent="이번 판 "+sessKg.toFixed(2)+"kg!";
   $("resDesc").innerHTML="🪙 이벤트코인 +"+sessCoin+" · 남은 판 "+playsLeft+"/3<br>누적 "+((d&&d.totalKg!=null)?d.totalKg:(totalKg+sessKg).toFixed(2))+"kg";
-  $("resHint").textContent=(d&&d.ok)?"✅ 저장 완료! 카톡 /새우 랭킹 확인":"⚠️ 저장 실패(네트워크)";
+  if(d===undefined){ $("resHint").textContent="저장 중…"; return; } // 재시도 중
+  $("resHint").textContent=(d&&(d.ok||d.already))?"✅ 저장 완료! 카톡 /새우 랭킹 확인":"⚠️ 저장 실패 — 새로고침 마셈";
   loadRank(); loadLeftRank();
 }
 function loadRank(){
