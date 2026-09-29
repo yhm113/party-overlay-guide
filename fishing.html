@@ -544,16 +544,36 @@
     }
   }
 
+  var sending = false;
   function doResolve(outcome){
-    if (resolved) return; resolved = true;
+    if (resolved || sending) return;   // 전송 확정 전엔 resolved 를 잠그지 않음(실패 시 재전송 가능)
+    sending = true;
     $("hold").disabled = true;
+    $("resHint").textContent = "⏳ 결과 저장 중…";
+    sendResolve(outcome, 0);
+  }
+  // 결과 전송: 실패해도 최대 5회 재시도(+keepalive). 서버 fishResolve 는 멱등(이미 done 이면 already).
+  function sendResolve(outcome, tryN){
     var body = JSON.stringify({ token: token, outcome: outcome, retryUsed: (attempt >= MAX_ATTEMPT) });
     fetch(FN + "/fishResolve", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: body
+      method: "POST", headers: { "Content-Type": "application/json" }, keepalive: true, body: body
     })
     .then(function(r){ return r.json(); })
-    .then(function(){ $("resHint").textContent = "✅ 결과가 카톡으로 전송됐어요. 채팅방을 확인하세요!"; })
-    .catch(function(){ $("resHint").textContent = "⚠️ 결과 전송에 실패했어요. 네트워크 확인 후 새로고침해 보세요."; });
+    .then(function(d){
+      if (d && (d.ok || d.already)) {
+        resolved = true; sending = false;
+        $("resHint").textContent = "✅ 결과가 카톡으로 전송됐어요. 채팅방을 확인하세요!";
+      } else if (tryN < 5) {
+        setTimeout(function(){ sendResolve(outcome, tryN + 1); }, 700 * (tryN + 1));
+      } else {
+        sending = false;
+        $("resHint").textContent = "⚠️ 결과 전송 실패. 새로고침해서 다시 시도해 주세요.";
+      }
+    })
+    .catch(function(){
+      if (tryN < 5) { setTimeout(function(){ sendResolve(outcome, tryN + 1); }, 700 * (tryN + 1)); }
+      else { sending = false; $("resHint").textContent = "⚠️ 결과 전송 실패. 네트워크 확인 후 새로고침해 주세요."; }
+    });
   }
 })();
 </script>
