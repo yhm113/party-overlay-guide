@@ -503,9 +503,10 @@
     if (kind === "win") {
       var elapsed = (LIMIT - timeLeft);
       if (sess.targetTier === "고대") {
-        // 고대(메갈로돈): 대성공 없음, 등급 상승 없음 — 포획 그 자체가 잭팟
+        // 고대: 대성공 없음, 등급 상승 없음 — 포획 그 자체가 잭팟. 종은 세션값 사용.
+        var ancName = sess.targetFish || "고대종";
         $("resEmoji").textContent = "🦈";
-        $("resHead").innerHTML = '<span class="good-c">메갈로돈 포획!!</span>';
+        $("resHead").innerHTML = '<span class="good-c">' + ancName + ' 포획!!</span>';
         $("resHead").className = "headline";
         $("resDesc").textContent = "고대의 포식자를 제압했다! (" + elapsed.toFixed(1) + "초)";
         // 결과 전송은 commitOutcome 에서 이미 처리됨

@@ -159,7 +159,7 @@
 
     <div class="evt">
       <label class="sw"><input type="checkbox" id="megaOn"><span></span></label>
-      <div class="info"><div class="title">🦈 메갈로돈 확률</div><div class="desc">고대(메갈로돈) 가중치 × 배수</div></div>
+      <div class="info"><div class="title">🦈 고대종 확률</div><div class="desc">고대 등급 가중치 × 배수</div></div>
       <div class="param"><input type="number" id="megaMult" min="1" step="1" value="10"><div class="unit">배</div></div>
     </div>
   </div>
@@ -188,7 +188,7 @@
     if(ev.luck&&ev.luck.on) parts.push("🎣 대박 ×"+ev.luck.mult);
     if(ev.cooldown&&ev.cooldown.on) parts.push("⏱ 쿨다운 "+ev.cooldown.minutes+"분");
     if(ev.minigame&&ev.minigame.on) parts.push("🔥 손맛 "+ev.minigame.chance+"%");
-    if(ev.mega&&ev.mega.on) parts.push("🦈 메갈로돈 ×"+ev.mega.mult);
+    if(ev.mega&&ev.mega.on) parts.push("🦈 고대종 ×"+ev.mega.mult);
     var when = (ev.startsAt?toLocal(ev.startsAt).replace("T"," "):"?")+" ~ "+(ev.endsAt?toLocal(ev.endsAt).replace("T"," "):"?");
     box.className = active?"on":"off";
     box.innerHTML = (active?"🟢 <b>진행 중</b>":"🕓 예약/종료됨")+"<br>"+(parts.length?parts.join(" · "):"(효과 없음)")+"<br><span style='color:var(--sub)'>"+when+"</span>";
