@@ -139,6 +139,20 @@
   function multOf(g){ if(g>=92)return 2.0; if(g>=80)return 1.8; if(g>=60)return 1.5; if(g>=40)return 1.25; return 1.1; }
   function multStr(g){ var m=multOf(g); return m===2.0?"2.0":(m===1.5?"1.5":(m===1.8?"1.8":String(m))); }
 
+  // 이미지 에셋 (없으면 도형 폴백)
+  var FLOAT_IMG = {"기본 찌":"float_basic","막대 찌":"float_stick","구슬 찌":"float_bead","전자 찌":"float_electronic","수정 찌":"float_crystal","용신의 찌":"float_dragon"};
+  var FLOAT_WC = {float_basic:268,float_stick:263,float_bead:306,float_electronic:258,float_crystal:250,float_dragon:223}; // waterContact source y (x=128)
+  var WATER_Y = 54;        // 캔버스(440×300) 수면 y (배경 waterline)
+  var FLOAT_SCALE = 0.28;  // 찌 표시 배율
+  var IMG = {};
+  function loadImages(){
+    var files = {bg:"img/strike/water.png", shadow:"img/strike/fish_shadow.png",
+      float_basic:"img/strike/float_basic.png", float_stick:"img/strike/float_stick.png",
+      float_bead:"img/strike/float_bead.png", float_electronic:"img/strike/float_electronic.png",
+      float_crystal:"img/strike/float_crystal.png", float_dragon:"img/strike/float_dragon.png"};
+    Object.keys(files).forEach(function(k){ var im=new Image(); im.onload=function(){ IMG[k]=im; }; im.src=files[k]; });
+  }
+
   var token = qs("t");
   var sess = null, resolved = false, sending = false;
   var cfg = null, winMs = 300, calm = 1.0;
@@ -157,6 +171,7 @@
     .catch(function(){ fail("서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요."); });
 
   function initIntro(){
+    loadImages();
     cfg = TIER_CFG[sess.targetTier] || TIER_CFG["희귀"];
     var fw = Number(sess.floatWin) || 1;
     calm = Number(sess.floatCalm) || 1;
@@ -293,49 +308,66 @@
 
   // ── 렌더 ──
   function render(dt){
-    var surfaceY = H*0.42;
-    // 하늘(위) / 물(아래)
-    ctx.fillStyle = "#071a2b"; ctx.fillRect(0,0,W,surfaceY);
-    var wg = ctx.createLinearGradient(0,surfaceY,0,H);
-    wg.addColorStop(0,"#0c3250"); wg.addColorStop(1,"#061c30");
-    ctx.fillStyle = wg; ctx.fillRect(0,surfaceY,W,H-surfaceY);
-    // 수면 물결
-    ctx.strokeStyle = "rgba(120,200,255,.28)"; ctx.lineWidth=2; ctx.beginPath();
-    for (var x=0;x<=W;x+=8){ var yy = surfaceY + Math.sin((x*0.05)+(clock*2))*2.2; if(x===0)ctx.moveTo(x,yy); else ctx.lineTo(x,yy); }
-    ctx.stroke();
-    if (flash>0){ ctx.fillStyle="rgba(120,230,160,"+(flash*0.18)+")"; ctx.fillRect(0,0,W,H); }
+    var cx = W*0.5;
+    // 배경(이미지 or 폴백)
+    if (IMG.bg){ ctx.drawImage(IMG.bg, 0, 0, W, H); }
+    else {
+      ctx.fillStyle="#071a2b"; ctx.fillRect(0,0,W,WATER_Y);
+      var wg=ctx.createLinearGradient(0,WATER_Y,0,H); wg.addColorStop(0,"#0c3250"); wg.addColorStop(1,"#061c30");
+      ctx.fillStyle=wg; ctx.fillRect(0,WATER_Y,W,H-WATER_Y);
+      ctx.strokeStyle="rgba(120,200,255,.28)"; ctx.lineWidth=2; ctx.beginPath();
+      for (var x=0;x<=W;x+=8){ var yy=WATER_Y+Math.sin((x*0.05)+(clock*2))*2.2; if(x===0)ctx.moveTo(x,yy); else ctx.lineTo(x,yy); }
+      ctx.stroke();
+    }
 
-    // 찌 위치: 기본 떠있음 + 미세 bob, 입질이면 depth만큼 내려감
-    var bob = Math.sin(clock*2.2)*3;
+    // dip: 기본 bob + 입질 depth
+    var bob = Math.sin(clock*2.2)*2.5;
     var dip = 0;
     if (active){
       var d = active.depth;
-      if (active.phase==="dive") dip = d * (active.ph/0.12);
+      if (active.phase==="dive") dip = d*(active.ph/0.12);
       else if (active.phase==="held") dip = d;
-      else if (active.phase==="rise") dip = d * (1 - active.ph/0.15);
+      else if (active.phase==="rise") dip = d*(1 - active.ph/0.15);
     }
-    var floatTopY = surfaceY - 44 + bob + dip*120;   // 찌 몸통 꼭대기
-    var cx = W*0.5;
+    var waterY = WATER_Y + bob + dip*85;   // 찌 waterContact 가 놓일 y
+
+    // 물고기 그림자(입질 중 은은하게)
+    if (IMG.shadow && active){
+      var sop = (active.phase==="held"?0.42:0.26) * (active.kind==="real"?1:0.7);
+      var sw=150, sh=75;
+      ctx.globalAlpha=sop; ctx.drawImage(IMG.shadow, cx-sw/2, Math.min(H-sh, waterY+44), sw, sh); ctx.globalAlpha=1;
+    }
+
     // 낚싯줄
-    ctx.strokeStyle="rgba(230,240,250,.5)"; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, floatTopY); ctx.stroke();
-    // 찌: 빨간 머리 + 흰 몸통 + 안테나
-    ctx.strokeStyle="#e8f0f8"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(cx,floatTopY-12); ctx.lineTo(cx,floatTopY); ctx.stroke();
-    var grd = ctx.createLinearGradient(cx-9,0,cx+9,0); grd.addColorStop(0,"#ff7676"); grd.addColorStop(1,"#d63a3a");
-    ctx.fillStyle = grd; ctx.beginPath(); ctx.ellipse(cx, floatTopY+10, 10, 16, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = "#f2f6fa"; ctx.beginPath(); ctx.ellipse(cx, floatTopY+24, 7, 10, 0, 0, Math.PI*2); ctx.fill();
-    // 윈도우 열림 표시(진짜 held 일 때 찌 주변 링)
+    ctx.strokeStyle="rgba(230,240,250,.45)"; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(cx,0); ctx.lineTo(cx, waterY); ctx.stroke();
+
+    // 찌(이미지 or 폴백 도형)
+    var fid = FLOAT_IMG[sess.floatName] || "float_basic";
+    if (IMG[fid]){
+      var s=FLOAT_SCALE, wcY=FLOAT_WC[fid]||260;
+      ctx.drawImage(IMG[fid], cx-128*s, waterY-wcY*s, 256*s, 512*s);
+    } else {
+      ctx.strokeStyle="#e8f0f8"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(cx,waterY-26); ctx.lineTo(cx,waterY-10); ctx.stroke();
+      var grd=ctx.createLinearGradient(cx-9,0,cx+9,0); grd.addColorStop(0,"#ff7676"); grd.addColorStop(1,"#d63a3a");
+      ctx.fillStyle=grd; ctx.beginPath(); ctx.ellipse(cx,waterY,10,16,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle="#f2f6fa"; ctx.beginPath(); ctx.ellipse(cx,waterY+14,7,10,0,0,Math.PI*2); ctx.fill();
+    }
+
+    if (flash>0){ ctx.fillStyle="rgba(120,230,160,"+(flash*0.16)+")"; ctx.fillRect(0,0,W,H); }
+
+    // 윈도우 열림 링(진짜 held + 미챔질)
     if (active && active.kind==="real" && active.phase==="held" && !active.struck){
-      ctx.strokeStyle="rgba(69,209,122,.9)"; ctx.lineWidth=3;
-      ctx.beginPath(); ctx.arc(cx, floatTopY+10, 26, 0, Math.PI*2); ctx.stroke();
+      ctx.strokeStyle="rgba(69,209,122,.95)"; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.arc(cx, waterY+6, 30, 0, Math.PI*2); ctx.stroke();
     }
 
     // 플로터
     for (var i=floaters.length-1;i>=0;i--){
-      var f = floaters[i]; f.t += dt; f.y -= dt*40;
+      var f=floaters[i]; f.t+=dt; f.y-=dt*40;
       var a = f.t<0.8?1:(1.2-f.t)/0.4; if(a<=0){ floaters.splice(i,1); continue; }
-      ctx.globalAlpha = Math.max(0,a); ctx.fillStyle=f.col; ctx.font="bold 22px "+"'Jua',sans-serif"; ctx.textAlign="center";
-      ctx.fillText(f.txt, cx, floatTopY - 24 + f.y); ctx.globalAlpha=1;
+      ctx.globalAlpha=Math.max(0,a); ctx.fillStyle=f.col; ctx.font="bold 22px 'Jua',sans-serif"; ctx.textAlign="center";
+      ctx.fillText(f.txt, cx, waterY - 34 + f.y); ctx.globalAlpha=1;
     }
   }
 
