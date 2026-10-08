@@ -359,15 +359,16 @@
 
     if (flash>0){ ctx.fillStyle="rgba(120,230,160,"+(flash*0.16)+")"; ctx.fillRect(0,0,W,H); }
 
-    // 챔질 신호: 진짜 입질 윈도우 동안 찌 머리 위에 "챔!" 표시(묻히지 않게)
+    // 챔질 신호: 진짜 입질 윈도우 동안 찌 머리 둘레에 굵은 녹색 링 + "챔!"(알파 고정=확실히 보임)
     if (active && active.kind==="real" && active.phase==="held" && !active.struck){
-      var pulse = 0.55 + 0.45*Math.sin(clock*18);
-      var indY = Math.max(24, fTop - 8);
-      ctx.globalAlpha = pulse; ctx.fillStyle = "#45d17a"; ctx.textAlign = "center";
-      ctx.font = "bold 22px 'Jua',sans-serif";
-      ctx.fillText("챔!", cx, indY);
-      ctx.beginPath(); ctx.moveTo(cx-9, indY+5); ctx.lineTo(cx+9, indY+5); ctx.lineTo(cx, indY+16); ctx.closePath(); ctx.fill();
-      ctx.globalAlpha = 1;
+      var headY = fTop + (hasImg ? 55 : 8);
+      var pr = 30 + 5*Math.sin(clock*16);
+      ctx.globalAlpha = 1; ctx.strokeStyle = "#1fd36a"; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.arc(cx, headY, pr, 0, Math.PI*2); ctx.stroke();
+      ctx.textAlign = "center"; ctx.font = "bold 28px 'Jua',sans-serif";
+      var tY = Math.max(26, fTop - 4);
+      ctx.lineWidth = 6; ctx.lineJoin = "round"; ctx.strokeStyle = "#06240f"; ctx.strokeText("챔!", cx, tY);
+      ctx.fillStyle = "#ffffff"; ctx.fillText("챔!", cx, tY);
     }
 
     // 플로터
