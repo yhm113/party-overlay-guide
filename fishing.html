@@ -572,6 +572,14 @@
     .then(function(d){
       if (d && (d.ok || d.already)) {
         resolved = true; sending = false;
+        // 서버가 실제로 준 물고기로 결과창 동기화 → 카톡 표시와 일치(등급상승 반영)
+        var rr = d.result;
+        if (rr && rr.outcome !== "fail" && rr.fishName) {
+          $("resEmoji").textContent = TIER_EMOJI[rr.finalTier] || "🎣";
+          $("resHead").innerHTML = '<span class="good-c">[' + rr.finalTier + '] ' + rr.fishName + '</span>';
+          $("resHead").className = "headline";
+          $("resDesc").textContent = rr.size + "cm · +" + rr.coins + "코인 (보유 " + rr.coinsTotal + ")";
+        }
         $("resHint").textContent = "✅ 결과가 카톡으로 전송됐어요. 채팅방을 확인하세요!";
       } else if (tryN < 5) {
         setTimeout(function(){ sendResolve(outcome, tryN + 1); }, 700 * (tryN + 1));
