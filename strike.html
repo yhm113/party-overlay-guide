@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>찌 챔질</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&display=swap">
+<style>
+  :root {
+    --bg: #0d1b2a; --bg2: #12293f; --panel: #14263c; --line: #24405f;
+    --txt: #e8f0f8; --sub: #9fb6cd; --accent: #4fc3f7; --accent-dk: #1d7fb0;
+    --good: #45d17a; --warn: #f6c343; --bad: #ff5b5b;
+    --disp: "Jua", "Malgun Gothic", sans-serif;
+    --body: -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: radial-gradient(130% 90% at 50% -10%, #1a3a5c 0%, var(--bg) 62%);
+    background-color: var(--bg);
+    color: var(--txt); font-family: var(--body);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 20px 16px 40px; min-height: 100%; user-select: none; touch-action: manipulation;
+  }
+  .card {
+    width: 100%; max-width: 460px;
+    background: linear-gradient(180deg, var(--bg2), var(--panel));
+    border: 1px solid var(--line); border-radius: 22px; padding: 24px 20px 26px;
+    box-shadow: 0 22px 60px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  h1 { font-family: var(--disp); font-size: 28px; font-weight: 400; margin: 0 0 4px; text-align: center; letter-spacing: .02em; }
+  .sub { color: var(--sub); font-size: 13px; text-align: center; margin-bottom: 16px; line-height: 1.6; }
+  .fishbox { text-align: center; margin: 8px 0 14px; }
+  .fishemoji { font-size: 54px; line-height: 1; display: inline-block; filter: drop-shadow(0 6px 10px rgba(0,0,0,.4)); }
+  .tier { font-family: var(--disp); font-size: 18px; margin-top: 4px; }
+  .meta { font-size: 12px; color: var(--sub); margin-top: 4px; line-height: 1.6; }
+
+  .stage-wrap { margin: 10px 0 6px; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background:#071320; }
+  #stage { width: 100%; height: auto; display: block; cursor: pointer; }
+
+  .gauge { margin: 12px 0 4px; }
+  .gauge .lbl { display: flex; justify-content: space-between; font-size: 12px; color: var(--sub); margin-bottom: 5px; }
+  .gauge .lbl b { color: var(--txt); font-variant-numeric: tabular-nums; }
+  .gauge .lbl .mult { color: var(--good); font-family: var(--disp); }
+  .bar { height: 22px; background: #0a1522; border-radius: 12px; overflow: hidden; position: relative; border: 1px solid var(--line); }
+  .fill { height: 100%; width: 0%; border-radius: 12px; transition: width .08s linear;
+          background: linear-gradient(90deg, #2e9bd6, var(--good) 60%, var(--warn)); }
+  .tick { position:absolute; top:0; height:100%; width:0; border-left:1px dashed rgba(255,255,255,.22); }
+  .status { text-align:center; font-family: var(--disp); font-size: 18px; margin: 8px 0 2px; min-height: 22px; }
+  .rowmeta { display:flex; justify-content:space-between; font-size:12px; color:var(--sub); margin-top:4px; }
+  .rowmeta b { color: var(--txt); font-variant-numeric: tabular-nums; }
+
+  .btn {
+    width: 100%; margin-top: 16px; padding: 20px; font-family: var(--disp); font-size: 21px;
+    border: none; border-radius: 16px; cursor: pointer; color: #06263a;
+    background: linear-gradient(180deg, #7dd6ff, var(--accent)); box-shadow: 0 7px 0 var(--accent-dk);
+    transition: transform .05s, box-shadow .05s; letter-spacing: .02em;
+  }
+  .btn:active { transform: translateY(6px); box-shadow: 0 1px 0 var(--accent-dk); }
+  .btn[disabled] { opacity:.5; box-shadow:none; }
+  .hint { text-align: center; color: var(--sub); font-size: 12px; margin-top: 10px; line-height: 1.6; }
+
+  .result { text-align: center; }
+  .result .big { font-size: 50px; margin: 4px 0; }
+  .result .headline { font-family: var(--disp); font-size: 24px; margin: 4px 0; }
+  .good-c { color: var(--good); } .bad-c { color: var(--bad); } .warn-c { color: var(--warn); }
+  .hidden { display: none !important; }
+  .errbox { text-align:center; color: var(--sub); font-size: 14px; line-height: 1.7; padding: 10px 4px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div id="loading" class="errbox">불러오는 중…</div>
+  <div id="errbox" class="errbox hidden"><div style="font-size:34px">🎣</div><div id="errmsg"></div></div>
+
+  <!-- 인트로 -->
+  <div id="intro" class="hidden">
+    <h1>🎣 찌 챔질</h1>
+    <div class="sub" id="introSub">입질이 왔다!</div>
+    <div class="fishbox">
+      <div class="fishemoji" id="introEmoji">🐟</div>
+      <div class="tier" id="introTier">[희귀] ?</div>
+      <div class="meta" id="introMeta"></div>
+    </div>
+    <div class="hint">
+      찌가 <b style="color:var(--txt)">쑥 깊이</b> 들어갈 때 화면을 <b style="color:var(--txt)">탭</b>해서 챔질!<br>
+      얕게 깔짝대는 <b class="warn-c">페이크 입질</b>에 탭하면 게이지 깎임.<br>
+      게이지 많이 채울수록 <b class="good-c">코인 배수 ↑ (최대 ×2.0)</b> · 못해도 ×1.1 보너스
+    </div>
+    <button class="btn" id="startBtn">시작하기</button>
+  </div>
+
+  <!-- 게임 -->
+  <div id="game" class="hidden">
+    <div class="stage-wrap"><canvas id="stage" width="440" height="300"></canvas></div>
+    <div class="status" id="statusTxt">찌를 지켜보세요…</div>
+    <div class="gauge">
+      <div class="lbl"><span>챔질 게이지</span><span><b id="gaugeTxt">0</b>% · 현재 <span class="mult" id="multTxt">×1.1</span></span></div>
+      <div class="bar"><div class="fill" id="gaugeFill"></div>
+        <div class="tick" style="left:40%"></div><div class="tick" style="left:60%"></div>
+        <div class="tick" style="left:80%"></div><div class="tick" style="left:92%"></div></div>
+    </div>
+    <div class="rowmeta"><span>입질 <b id="biteTxt">0/0</b></span><span>남은 시간 <b id="timeTxt">0.0</b>s</span></div>
+    <div class="hint">화면 아무 데나 탭 = 챔질</div>
+  </div>
+
+  <!-- 결과 -->
+  <div id="result" class="result hidden">
+    <div class="big" id="resEmoji">🎣</div>
+    <div class="headline" id="resHead"></div>
+    <div class="sub" id="resDesc" style="margin-top:8px"></div>
+    <div class="hint" id="resHint"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var FN = "https://asia-northeast3-partyoverlay-786d6.cloudfunctions.net";
+  var TIER_EMOJI = {"희귀":"💎","영웅":"🔥","전설":"🌟","신화":"🐉","고대":"🦈","고급":"🐠","일반":"🐟","쓰레기":"🗑"};
+  var TIER_COLOR = {"희귀":"#8fd0ff","영웅":"#ff9f55","전설":"#ffd964","신화":"#b98cff","고대":"#ff7676"};
+  // 등급별: 입질 수 / 윈도우 배수 / 입질 간격(s) / 페이크 강도(깊이 비율)
+  var TIER_CFG = {
+    "희귀": {bites:7,  winF:1.00, gap:1.6, fakeDepth:0.45, fakeMax:1},
+    "영웅": {bites:8,  winF:0.82, gap:1.3, fakeDepth:0.58, fakeMax:2},
+    "전설": {bites:9,  winF:0.66, gap:1.1, fakeDepth:0.70, fakeMax:2},
+    "신화": {bites:10, winF:0.52, gap:0.9, fakeDepth:0.82, fakeMax:3}
+  };
+  var WIN_BASE = 300;   // 윈도우 기본(ms)
+  var DECAY = 2.0;      // 게이지 감소 %/s (floatCalm 곱)
+  var MISS_PEN = 8.0;   // 헛챔질 패널티 % (floatCalm 곱)
+
+  function $(id){ return document.getElementById(id); }
+  function show(id){ $(id).classList.remove("hidden"); }
+  function hide(id){ $(id).classList.add("hidden"); }
+  function qs(k){ var m = location.search.match(new RegExp("[?&]"+k+"=([^&]+)")); return m ? decodeURIComponent(m[1]) : ""; }
+  function fail(msg){ hide("loading"); show("errbox"); $("errmsg").textContent = msg; }
+  function multOf(g){ if(g>=92)return 2.0; if(g>=80)return 1.8; if(g>=60)return 1.5; if(g>=40)return 1.25; return 1.1; }
+  function multStr(g){ var m=multOf(g); return m===2.0?"2.0":(m===1.5?"1.5":(m===1.8?"1.8":String(m))); }
+
+  var token = qs("t");
+  var sess = null, resolved = false, sending = false;
+  var cfg = null, winMs = 300, calm = 1.0;
+
+  if (!token) { fail("잘못된 접속이에요. 카톡의 /낚시 링크로 다시 들어와 주세요."); return; }
+
+  fetch(FN + "/fishState?t=" + encodeURIComponent(token))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d || !d.ok) { fail((d && d.error) || "세션을 불러오지 못했어요."); return; }
+      if (d.status === "done") { fail("이미 끝난 챔질이에요. 카톡에서 결과를 확인하세요!"); return; }
+      if (d.status === "playing") { fail("이미 시작된 챔질이에요. 한 번 시작하면 다시 못 해요!"); return; }
+      if (d.gameType && d.gameType !== "strike") { location.href = "fishing.html?t=" + encodeURIComponent(token); return; }
+      sess = d; initIntro();
+    })
+    .catch(function(){ fail("서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요."); });
+
+  function initIntro(){
+    cfg = TIER_CFG[sess.targetTier] || TIER_CFG["희귀"];
+    var fw = Number(sess.floatWin) || 1;
+    calm = Number(sess.floatCalm) || 1;
+    winMs = WIN_BASE * cfg.winF * fw;
+    var emo = TIER_EMOJI[sess.targetTier] || "🐟";
+    var col = TIER_COLOR[sess.targetTier] || "#8fd0ff";
+    hide("loading"); show("intro");
+    $("introSub").textContent = sess.nick + " 님, 찌에 입질이 왔다!";
+    $("introEmoji").textContent = emo;
+    $("introTier").textContent = "[" + sess.targetTier + "] " + (sess.targetFish || "?");
+    $("introTier").style.color = col;
+    $("introMeta").textContent = "🎣 " + (sess.floatName || "기본 찌") +
+      "  ·  입질 " + cfg.bites + "회  ·  챔질 창 " + Math.round(winMs) + "ms";
+    $("startBtn").onclick = function(){
+      var btn = $("startBtn"); btn.disabled = true; btn.textContent = "시작 중...";
+      fetch(FN + "/fishBegin", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({token:token}) })
+        .then(function(r){ return r.json(); })
+        .then(function(d){ if (d && d.ok) { hide("intro"); startGame(); } else { fail((d && d.error) || "이미 시작된 챔질이에요."); } })
+        .catch(function(){ hide("intro"); startGame(); }); // 네트워크 실패 시 진행(정상 유저 우선)
+    };
+  }
+
+  // ── 입질 타임라인 생성 ──
+  var events = [];   // {t, kind:"real"|"fake", depth, struck:false}
+  function buildTimeline(){
+    events = [];
+    var t = 1.0;
+    for (var i = 0; i < cfg.bites; i++){
+      var fakes = Math.floor(Math.random() * (cfg.fakeMax + 1));
+      for (var f = 0; f < fakes; f++){
+        events.push({ t: t, kind:"fake", depth: cfg.fakeDepth * (0.85 + Math.random()*0.3), struck:false });
+        t += 0.5 + Math.random()*0.4;
+      }
+      events.push({ t: t, kind:"real", depth: 0.9 + Math.random()*0.08, struck:false });
+      t += cfg.gap * (0.8 + Math.random()*0.5);
+    }
+    endT = t + 0.6;
+  }
+
+  // ── 게임 상태 ──
+  var gauge = 0, biteHit = 0, running = false, over = false;
+  var raf = null, lastT = 0, clock = 0, endT = 12;
+  var fillPerfect = 20, active = null, floaters = [];
+  var ctx, W = 440, H = 300, flash = 0;
+
+  function startGame(){
+    show("game");
+    buildTimeline();
+    fillPerfect = 100 / cfg.bites * 1.4;
+    gauge = 0; biteHit = 0; clock = 0; running = true; over = false; active = null; floaters = [];
+    ctx = $("stage").getContext("2d");
+    bindTap();
+    $("biteTxt").textContent = "0/" + cfg.bites;
+    lastT = performance.now();
+    raf = requestAnimationFrame(loop);
+  }
+
+  function bindTap(){
+    var cv = $("stage");
+    var handler = function(e){ e.preventDefault(); onTap(); };
+    cv.addEventListener("touchstart", handler, {passive:false});
+    cv.addEventListener("mousedown", handler);
+  }
+
+  function onTap(){
+    if (!running || over) return;
+    // 현재 열린 '진짜' 입질 윈도우가 있나?
+    if (active && active.kind === "real" && active.phase === "held" && !active.struck){
+      active.struck = true;
+      var ratio = active.heldLeft / (winMs/1000);        // 남은 윈도우 비율(빠를수록 ↑)
+      var prec = 0.5 + 0.5 * Math.max(0, Math.min(1, ratio));
+      var add = fillPerfect * prec;
+      gauge = Math.min(100, gauge + add);
+      biteHit++;
+      floaters.push({txt: (prec>0.85?"완벽!":"챔질!"), col: prec>0.85?"#45d17a":"#7dd6ff", t:0, y:0});
+      flash = 1;
+      setStatus(prec>0.85 ? "완벽한 챔질!" : "챔질 성공!", "#45d17a");
+    } else {
+      // 헛챔질(페이크/빈 타이밍)
+      gauge = Math.max(0, gauge - MISS_PEN * calm);
+      floaters.push({txt:"헛챔질", col:"#ff5b5b", t:0, y:0});
+      setStatus("헛챔질! (게이지 ↓)", "#ff5b5b");
+    }
+  }
+  var statusT = 0;
+  function setStatus(txt, col){ $("statusTxt").textContent = txt; $("statusTxt").style.color = col||"#9fb6cd"; statusT = 0.9; }
+
+  function loop(){
+    var now = performance.now();
+    var dt = Math.min(0.05, (now - lastT)/1000); lastT = now; clock += dt;
+
+    // decay
+    gauge = Math.max(0, gauge - DECAY * calm * dt);
+
+    // 입질 활성화/페이즈 진행
+    if (!active){
+      for (var i=0;i<events.length;i++){
+        var ev = events[i];
+        if (!ev.done && clock >= ev.t){ active = ev; active.phase="dive"; active.ph=0; break; }
+      }
+    }
+    if (active){
+      active.ph += dt;
+      if (active.phase === "dive"){
+        if (active.ph >= 0.12){ active.phase = "held"; active.ph = 0; active.heldLeft = (active.kind==="real"? winMs/1000 : 0.15); }
+      } else if (active.phase === "held"){
+        active.heldLeft -= dt;
+        if (active.heldLeft <= 0){
+          // 진짜인데 못 챔질했으면 놓침
+          if (active.kind === "real" && !active.struck){ floaters.push({txt:"놓침", col:"#9fb6cd", t:0, y:0}); setStatus("놓쳤다…", "#9fb6cd"); }
+          active.phase = "rise"; active.ph = 0;
+        }
+      } else if (active.phase === "rise"){
+        if (active.ph >= 0.15){ active.done = true; active = null; }
+      }
+    }
+
+    // 종료
+    if (clock >= endT){ running = false; over = true; finish(); return; }
+
+    if (statusT > 0){ statusT -= dt; if (statusT <= 0) setStatus("찌를 지켜보세요…", "#9fb6cd"); }
+    if (flash > 0) flash = Math.max(0, flash - dt*4);
+
+    render(dt);
+    // HUD
+    $("gaugeFill").style.width = gauge.toFixed(1) + "%";
+    $("gaugeTxt").textContent = Math.round(gauge);
+    $("multTxt").textContent = "×" + multStr(gauge);
+    $("biteTxt").textContent = biteHit + "/" + cfg.bites;
+    $("timeTxt").textContent = Math.max(0, endT - clock).toFixed(1);
+
+    raf = requestAnimationFrame(loop);
+  }
+
+  // ── 렌더 ──
+  function render(dt){
+    var surfaceY = H*0.42;
+    // 하늘(위) / 물(아래)
+    ctx.fillStyle = "#071a2b"; ctx.fillRect(0,0,W,surfaceY);
+    var wg = ctx.createLinearGradient(0,surfaceY,0,H);
+    wg.addColorStop(0,"#0c3250"); wg.addColorStop(1,"#061c30");
+    ctx.fillStyle = wg; ctx.fillRect(0,surfaceY,W,H-surfaceY);
+    // 수면 물결
+    ctx.strokeStyle = "rgba(120,200,255,.28)"; ctx.lineWidth=2; ctx.beginPath();
+    for (var x=0;x<=W;x+=8){ var yy = surfaceY + Math.sin((x*0.05)+(clock*2))*2.2; if(x===0)ctx.moveTo(x,yy); else ctx.lineTo(x,yy); }
+    ctx.stroke();
+    if (flash>0){ ctx.fillStyle="rgba(120,230,160,"+(flash*0.18)+")"; ctx.fillRect(0,0,W,H); }
+
+    // 찌 위치: 기본 떠있음 + 미세 bob, 입질이면 depth만큼 내려감
+    var bob = Math.sin(clock*2.2)*3;
+    var dip = 0;
+    if (active){
+      var d = active.depth;
+      if (active.phase==="dive") dip = d * (active.ph/0.12);
+      else if (active.phase==="held") dip = d;
+      else if (active.phase==="rise") dip = d * (1 - active.ph/0.15);
+    }
+    var floatTopY = surfaceY - 44 + bob + dip*120;   // 찌 몸통 꼭대기
+    var cx = W*0.5;
+    // 낚싯줄
+    ctx.strokeStyle="rgba(230,240,250,.5)"; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, floatTopY); ctx.stroke();
+    // 찌: 빨간 머리 + 흰 몸통 + 안테나
+    ctx.strokeStyle="#e8f0f8"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(cx,floatTopY-12); ctx.lineTo(cx,floatTopY); ctx.stroke();
+    var grd = ctx.createLinearGradient(cx-9,0,cx+9,0); grd.addColorStop(0,"#ff7676"); grd.addColorStop(1,"#d63a3a");
+    ctx.fillStyle = grd; ctx.beginPath(); ctx.ellipse(cx, floatTopY+10, 10, 16, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#f2f6fa"; ctx.beginPath(); ctx.ellipse(cx, floatTopY+24, 7, 10, 0, 0, Math.PI*2); ctx.fill();
+    // 윈도우 열림 표시(진짜 held 일 때 찌 주변 링)
+    if (active && active.kind==="real" && active.phase==="held" && !active.struck){
+      ctx.strokeStyle="rgba(69,209,122,.9)"; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.arc(cx, floatTopY+10, 26, 0, Math.PI*2); ctx.stroke();
+    }
+
+    // 플로터
+    for (var i=floaters.length-1;i>=0;i--){
+      var f = floaters[i]; f.t += dt; f.y -= dt*40;
+      var a = f.t<0.8?1:(1.2-f.t)/0.4; if(a<=0){ floaters.splice(i,1); continue; }
+      ctx.globalAlpha = Math.max(0,a); ctx.fillStyle=f.col; ctx.font="bold 22px "+"'Jua',sans-serif"; ctx.textAlign="center";
+      ctx.fillText(f.txt, cx, floatTopY - 24 + f.y); ctx.globalAlpha=1;
+    }
+  }
+
+  // ── 종료 → 결과 전송 ──
+  function finish(){
+    if (raf) cancelAnimationFrame(raf); raf=null;
+    hide("game"); show("result");
+    var finalG = Math.round(gauge);
+    $("resEmoji").textContent = finalG>=80?"🎉":(finalG>=40?"🎣":"🐟");
+    $("resHead").innerHTML = '<span class="good-c">챔질 ' + finalG + '% · 코인 ×' + multStr(finalG) + '</span>';
+    $("resDesc").textContent = "챔질 " + biteHit + "/" + cfg.bites + " 성공 · 결과를 카톡으로 보내는 중…";
+    $("resHint").textContent = "⏳ 결과 저장 중…";
+    sendResolve(finalG, 0);
+  }
+  function sendResolve(gaugeVal, tryN){
+    var body = JSON.stringify({ token: token, outcome: "success", gauge: gaugeVal });
+    fetch(FN + "/fishResolve", { method:"POST", headers:{"Content-Type":"application/json"}, keepalive:true, body: body })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (d && (d.ok || d.already)) {
+          resolved = true; sending = false;
+          if (d.result){ $("resDesc").textContent = (d.result.fishName||"") + " " + (d.result.size||"") + "cm · +" + (d.result.coins||0) + "코인 (보유 " + (d.result.coinsTotal||0) + ")"; }
+          $("resHint").textContent = "✅ 결과가 카톡으로 전송됐어요. 채팅방을 확인하세요!";
+        } else if (tryN < 5) { setTimeout(function(){ sendResolve(gaugeVal, tryN+1); }, 700*(tryN+1)); }
+        else { sending = false; $("resHint").textContent = "⚠️ 결과 전송 실패. 새로고침해서 다시 시도해 주세요."; }
+      })
+      .catch(function(){
+        if (tryN < 5) { setTimeout(function(){ sendResolve(gaugeVal, tryN+1); }, 700*(tryN+1)); }
+        else { sending = false; $("resHint").textContent = "⚠️ 결과 전송 실패. 네트워크 확인 후 새로고침해 주세요."; }
+      });
+  }
+})();
+</script>
+</body>
+</html>

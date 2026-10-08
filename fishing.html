@@ -170,6 +170,7 @@
       if (!d || !d.ok) { fail((d && d.error) || "세션을 불러오지 못했어요."); return; }
       if (d.status === "done") { fail("이미 끝난 대결이에요. 카톡에서 결과를 확인하세요!"); return; }
       if (d.status === "playing") { fail("이미 시작된 대결이에요. 한 번 시작한 손맛은 다시 못 해요!"); return; }
+      if (d.gameType === "strike") { location.href = "strike.html?t=" + encodeURIComponent(token); return; }
       sess = d;
       initIntro();
     })
