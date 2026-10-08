@@ -371,12 +371,16 @@
       ctx.fillStyle = "#ffffff"; ctx.fillText("챔!", cx, tY);
     }
 
-    // 플로터
+    // 플로터(챔질!/완벽!/헛챔질/놓침) — 외곽선으로 또렷하게, 화면 안에서 살짝만 떠오름
     for (var i=floaters.length-1;i>=0;i--){
-      var f=floaters[i]; f.t+=dt; f.y-=dt*40;
+      var f=floaters[i]; f.t+=dt; f.y-=dt*22;
+      if (f.by===undefined) f.by = Math.min(H-56, Math.max(96, waterY - 26)); // 짤림 방지 고정 기준선
       var a = f.t<0.8?1:(1.2-f.t)/0.4; if(a<=0){ floaters.splice(i,1); continue; }
-      ctx.globalAlpha=Math.max(0,a); ctx.fillStyle=f.col; ctx.font="bold 22px 'Jua',sans-serif"; ctx.textAlign="center";
-      ctx.fillText(f.txt, cx, waterY - 34 + f.y); ctx.globalAlpha=1;
+      ctx.globalAlpha=Math.max(0,a); ctx.textAlign="center"; ctx.font="bold 24px 'Jua',sans-serif";
+      var fy = f.by + f.y;
+      ctx.lineWidth=5; ctx.lineJoin="round"; ctx.strokeStyle="#0a1726"; ctx.strokeText(f.txt, cx, fy);
+      ctx.fillStyle=f.col; ctx.fillText(f.txt, cx, fy);
+      ctx.globalAlpha=1;
     }
   }
 
