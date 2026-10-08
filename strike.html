@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>찌 챔질</title>
+<title>찌맛</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&display=swap">
@@ -77,7 +77,7 @@
 
   <!-- 인트로 -->
   <div id="intro" class="hidden">
-    <h1>🎣 찌 챔질</h1>
+    <h1>🎣 찌맛</h1>
     <div class="sub" id="introSub">입질이 왔다!</div>
     <div class="fishbox">
       <div class="fishemoji" id="introEmoji">🐟</div>
@@ -331,22 +331,25 @@
     }
     var waterY = WATER_Y + bob + dip*85;   // 찌 waterContact 가 놓일 y
 
-    // 물고기 그림자(입질 중 은은하게)
-    if (IMG.shadow && active){
-      var sop = (active.phase==="held"?0.42:0.26) * (active.kind==="real"?1:0.7);
-      var sw=150, sh=75;
-      ctx.globalAlpha=sop; ctx.drawImage(IMG.shadow, cx-sw/2, Math.min(H-sh, waterY+44), sw, sh); ctx.globalAlpha=1;
+    // 물고기 그림자: 깊은 물속을 천천히 가로지르는 분위기용(찌와 분리, 글루 X)
+    if (IMG.shadow){
+      var fx = W + 110 - ((clock*42) % (W+240));
+      ctx.globalAlpha = 0.18; ctx.drawImage(IMG.shadow, fx-75, H*0.74-37, 150, 75); ctx.globalAlpha = 1;
     }
 
-    // 낚싯줄
+    // 찌 위치 계산
+    var fid = FLOAT_IMG[sess.floatName] || "float_basic";
+    var hasImg = !!IMG[fid];
+    var wcY = FLOAT_WC[fid] || 260;
+    var fTop = hasImg ? (waterY - wcY*FLOAT_SCALE) : (waterY - 30);  // 찌 이미지 꼭대기
+
+    // 낚싯줄 (위에서 수면까지)
     ctx.strokeStyle="rgba(230,240,250,.45)"; ctx.lineWidth=1.5;
     ctx.beginPath(); ctx.moveTo(cx,0); ctx.lineTo(cx, waterY); ctx.stroke();
 
     // 찌(이미지 or 폴백 도형)
-    var fid = FLOAT_IMG[sess.floatName] || "float_basic";
-    if (IMG[fid]){
-      var s=FLOAT_SCALE, wcY=FLOAT_WC[fid]||260;
-      ctx.drawImage(IMG[fid], cx-128*s, waterY-wcY*s, 256*s, 512*s);
+    if (hasImg){
+      ctx.drawImage(IMG[fid], cx-128*FLOAT_SCALE, fTop, 256*FLOAT_SCALE, 512*FLOAT_SCALE);
     } else {
       ctx.strokeStyle="#e8f0f8"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(cx,waterY-26); ctx.lineTo(cx,waterY-10); ctx.stroke();
       var grd=ctx.createLinearGradient(cx-9,0,cx+9,0); grd.addColorStop(0,"#ff7676"); grd.addColorStop(1,"#d63a3a");
@@ -356,10 +359,15 @@
 
     if (flash>0){ ctx.fillStyle="rgba(120,230,160,"+(flash*0.16)+")"; ctx.fillRect(0,0,W,H); }
 
-    // 윈도우 열림 링(진짜 held + 미챔질)
+    // 챔질 신호: 진짜 입질 윈도우 동안 찌 머리 위에 "챔!" 표시(묻히지 않게)
     if (active && active.kind==="real" && active.phase==="held" && !active.struck){
-      ctx.strokeStyle="rgba(69,209,122,.95)"; ctx.lineWidth=3;
-      ctx.beginPath(); ctx.arc(cx, waterY+6, 30, 0, Math.PI*2); ctx.stroke();
+      var pulse = 0.55 + 0.45*Math.sin(clock*18);
+      var indY = Math.max(24, fTop - 8);
+      ctx.globalAlpha = pulse; ctx.fillStyle = "#45d17a"; ctx.textAlign = "center";
+      ctx.font = "bold 22px 'Jua',sans-serif";
+      ctx.fillText("챔!", cx, indY);
+      ctx.beginPath(); ctx.moveTo(cx-9, indY+5); ctx.lineTo(cx+9, indY+5); ctx.lineTo(cx, indY+16); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1;
     }
 
     // 플로터
