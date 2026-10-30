@@ -118,6 +118,7 @@
     {id:"line",  name:"🧵 낚싯줄", lock:false},
     {id:"float", name:"🎣 찌",    lock:false},
     {id:"dex",   name:"📖 도감",   lock:false},
+    {id:"odds",  name:"🎲 확률",   lock:false},
     {id:"bait",  name:"🪱 미끼",   lock:true},
     {id:"enh",   name:"⚒ 강화",   lock:true},
     {id:"gacha", name:"🎰 가챠",   lock:true}
@@ -159,11 +160,24 @@
     if (tab==="line")  return renderShop(p, st.lines, "line", lineStat);
     if (tab==="float") return renderShop(p, st.floats, "float", floatStat);
     if (tab==="dex")   return renderDex(p);
+    if (tab==="odds")  return renderOdds(p);
     // 준비 중 탭
     var soon = {bait:["🪱","미끼 — 곧 열려요!","캐스팅 전 미끼로 희귀·대박 확률 ↑"],
                 enh:["⚒","장비 강화 — 곧 열려요!","낚싯대·찌를 +강화해 성능 ↑ (실패 리스크)"],
                 gacha:["🎰","가챠 — 곧 열려요!","코인으로 뽑기! 미끼·버프·치장 획득"]}[tab];
     p.innerHTML = '<div class="soon"><div class="big">'+soon[0]+'</div><div style="font-family:var(--disp);font-size:18px;color:var(--txt);margin:8px 0">'+soon[1]+'</div>'+soon[2]+'</div>';
+  }
+
+  function renderOdds(p){
+    var o = st.odds || {tiers:[], coinMult:1};
+    var h = '<div style="text-align:center;font-family:var(--disp);font-size:16px;margin:2px 0 12px">🎲 등급 확률 [<span style="color:var(--accent)">'+st.rod+'</span>]</div>';
+    o.tiers.forEach(function(t){
+      h += '<div class="item" style="padding:9px 13px"><div class="mid"><div class="nm" style="font-size:15px">'+t.emoji+' '+t.tier+'</div></div>'+
+           '<div class="pr" style="color:var(--txt);font-size:15px">'+t.pct.toFixed(t.pct<1?2:1)+'%</div></div>';
+    });
+    h += '<div class="gear" style="margin-top:10px;text-align:center;font-family:var(--disp);font-size:15px;color:var(--gold)">💰 코인 배수 ×'+o.coinMult+'</div>';
+    h += '<div class="soon" style="padding:12px 10px;font-size:12px">낚싯대·이벤트에 따라 자동 반영돼요</div>';
+    p.innerHTML = h;
   }
 
   var dexBook = 1;
