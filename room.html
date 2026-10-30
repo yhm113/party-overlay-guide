@@ -217,14 +217,16 @@
   function renderShop(p, items, kind, statFn){
     items.forEach(function(it){
       var row=document.createElement("div");
-      row.className="item"+(it.owned?" cur":"");
-      var btn;
-      if (it.owned) btn='<button class="buy cur" disabled>✅ 사용중</button>';
-      else if (st.coins < it.price) btn='<button class="buy" disabled>코인 부족</button>';
-      else btn='<button class="buy" data-kind="'+kind+'" data-name="'+encodeURIComponent(it.name)+'">구매·장착</button>';
+      row.className="item"+(it.cur?" cur":"");
+      var data='data-kind="'+kind+'" data-name="'+encodeURIComponent(it.name)+'"';
+      var btn, pr;
+      if (it.cur){ btn='<button class="buy cur" disabled>✅ 사용중</button>'; pr="보유"; }
+      else if (it.owned){ btn='<button class="buy" '+data+'>장착</button>'; pr="보유"; }
+      else if (st.coins < it.price){ btn='<button class="buy" disabled>코인 부족</button>'; pr="🪙 "+won(it.price); }
+      else { btn='<button class="buy" '+data+'>구매·장착</button>'; pr="🪙 "+won(it.price); }
       row.innerHTML =
         '<div class="mid"><div class="nm">'+it.name+'</div><div class="st">'+statFn(it)+'</div></div>'+
-        '<div class="pr">'+(it.price===0?"기본":("🪙 "+won(it.price)))+'</div>'+btn;
+        '<div class="pr">'+(it.price===0?"기본":pr)+'</div>'+btn;
       p.appendChild(row);
     });
     // 구매 버튼 바인딩
