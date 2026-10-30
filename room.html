@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>낚시터</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&display=swap">
+<style>
+  :root {
+    --bg:#0d1b2a; --bg2:#12293f; --panel:#14263c; --line:#24405f;
+    --txt:#e8f0f8; --sub:#9fb6cd; --accent:#4fc3f7; --accent-dk:#1d7fb0;
+    --good:#45d17a; --warn:#f6c343; --bad:#ff5b5b; --gold:#ffd964;
+    --disp:"Jua","Malgun Gothic",sans-serif;
+    --body:-apple-system,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; min-height:100%; }
+  body {
+    background:radial-gradient(130% 80% at 50% -10%, #1a3a5c 0%, var(--bg) 60%);
+    background-color:var(--bg); color:var(--txt); font-family:var(--body);
+    display:flex; justify-content:center; padding:18px 14px 48px; user-select:none;
+  }
+  .card { width:100%; max-width:480px; }
+  .err { text-align:center; color:var(--sub); font-size:14px; line-height:1.8; padding:40px 10px; }
+  h1 { font-family:var(--disp); font-size:26px; font-weight:400; margin:0; letter-spacing:.02em; }
+  .head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .coins { font-family:var(--disp); font-size:18px; color:var(--gold); background:#0a1522;
+           border:1px solid var(--line); border-radius:12px; padding:7px 13px; }
+  .coins b { font-variant-numeric:tabular-nums; }
+
+  .gear { background:linear-gradient(180deg,var(--bg2),var(--panel)); border:1px solid var(--line);
+          border-radius:16px; padding:12px 14px; margin-bottom:12px; font-size:13px; }
+  .gear .row { display:flex; justify-content:space-between; padding:3px 0; }
+  .gear .row span:first-child { color:var(--sub); }
+  .dex { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .dex .d { font-size:11px; color:var(--sub); background:#0a1522; border:1px solid var(--line);
+            border-radius:8px; padding:3px 7px; }
+  .dex .d b { color:var(--txt); }
+
+  .tabs { display:flex; gap:6px; margin-bottom:12px; overflow-x:auto; padding-bottom:2px; }
+  .tab { flex:0 0 auto; font-family:var(--disp); font-size:14px; padding:9px 13px; border-radius:11px;
+         background:#0a1522; border:1px solid var(--line); color:var(--sub); cursor:pointer; white-space:nowrap; }
+  .tab.on { background:var(--accent); color:#06263a; border-color:var(--accent); }
+  .tab.lock { opacity:.5; }
+
+  .item { display:flex; align-items:center; gap:10px; background:linear-gradient(180deg,var(--bg2),var(--panel));
+          border:1px solid var(--line); border-radius:13px; padding:11px 13px; margin-bottom:8px; }
+  .item.cur { border-color:var(--good); box-shadow:inset 0 0 0 1px rgba(69,209,122,.3); }
+  .item .nm { font-family:var(--disp); font-size:16px; }
+  .item .st { font-size:11px; color:var(--sub); margin-top:2px; }
+  .item .mid { flex:1; min-width:0; }
+  .item .pr { text-align:right; font-size:12px; color:var(--gold); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .buy { font-family:var(--disp); font-size:14px; border:none; border-radius:10px; padding:9px 12px;
+         cursor:pointer; color:#06263a; background:linear-gradient(180deg,#7dd6ff,var(--accent)); white-space:nowrap; }
+  .buy:active { transform:translateY(1px); }
+  .buy[disabled] { background:#1a2c42; color:var(--sub); cursor:default; }
+  .buy.cur { background:transparent; color:var(--good); border:1px solid var(--good); }
+
+  .soon { text-align:center; color:var(--sub); font-size:14px; line-height:1.9; padding:34px 10px; }
+  .soon .big { font-size:40px; }
+  .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
+           background:#0a1522; border:1px solid var(--line); color:var(--txt); font-size:14px;
+           padding:11px 18px; border-radius:12px; opacity:0; transition:.25s; pointer-events:none; max-width:90%; text-align:center; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div id="loading" class="err">낚시터 불러오는 중…</div>
+  <div id="errbox" class="err hidden"><div style="font-size:34px">🎣</div><div id="errmsg"></div></div>
+
+  <div id="main" class="hidden">
+    <div class="head">
+      <h1>🎣 낚시터</h1>
+      <div class="coins">🪙 <b id="coinTxt">0</b></div>
+    </div>
+
+    <div class="gear">
+      <div class="row"><span>🎣 낚싯대</span><b id="gRod">-</b></div>
+      <div class="row"><span>🧵 낚싯줄</span><b id="gLine">-</b></div>
+      <div class="row"><span>🎣 찌</span><b id="gFloat">-</b></div>
+      <div class="row"><span>🏆 최대어</span><b id="gBest">-</b></div>
+      <div class="dex" id="dexBox"></div>
+    </div>
+
+    <div class="tabs" id="tabs"></div>
+    <div id="panel"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  var FN = "https://asia-northeast3-partyoverlay-786d6.cloudfunctions.net";
+  function $(id){ return document.getElementById(id); }
+  function show(id){ $(id).classList.remove("hidden"); }
+  function hide(id){ $(id).classList.add("hidden"); }
+  function qs(k){ var m=location.search.match(new RegExp("[?&]"+k+"=([^&]+)")); return m?decodeURIComponent(m[1]):""; }
+  function fail(msg){ hide("loading"); hide("main"); show("errbox"); $("errmsg").textContent=msg; }
+  function won(n){ return (n||0).toLocaleString("ko-KR"); }
+  var toastT;
+  function toast(msg){ var t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(function(){ t.classList.remove("show"); },1800); }
+
+  var token = qs("t");
+  var st = null, tab = "rod", busy = false;
+  var DEXN = ["📖도감1","📗도감2","📘도감3","📙도감4"];
+  var TABS = [
+    {id:"rod",   name:"🎣 낚싯대", lock:false},
+    {id:"line",  name:"🧵 낚싯줄", lock:false},
+    {id:"float", name:"🎣 찌",    lock:false},
+    {id:"bait",  name:"🪱 미끼",   lock:true},
+    {id:"enh",   name:"⚒ 강화",   lock:true},
+    {id:"gacha", name:"🎰 가챠",   lock:true}
+  ];
+
+  if (!token){ fail("잘못된 접속이에요.\n카톡에서 /낚시 방 으로 다시 열어주세요."); return; }
+
+  fetch(FN+"/fishRoomState?t="+encodeURIComponent(token))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d || !d.ok){ fail((d&&d.error)||"불러오지 못했어요."); return; }
+      st = d.state; hide("loading"); show("main");
+      buildTabs(); render();
+    })
+    .catch(function(){ fail("서버에 연결하지 못했어요.\n잠시 후 다시 시도해 주세요."); });
+
+  function buildTabs(){
+    var box=$("tabs"); box.innerHTML="";
+    TABS.forEach(function(t){
+      var b=document.createElement("div");
+      b.className="tab"+(t.id===tab?" on":"")+(t.lock?" lock":"");
+      b.textContent=t.name;
+      b.onclick=function(){ tab=t.id; buildTabs(); render(); };
+      box.appendChild(b);
+    });
+  }
+
+  function render(){
+    // 상단 요약
+    $("coinTxt").textContent = won(st.coins);
+    $("gRod").textContent = st.rod; $("gLine").textContent = st.line; $("gFloat").textContent = st.float;
+    $("gBest").textContent = st.best ? (st.best.name+" "+st.best.size+"cm") : "-";
+    var db=$("dexBox"); db.innerHTML="";
+    for (var i=0;i<4;i++){ var d=document.createElement("div"); d.className="d";
+      d.innerHTML=DEXN[i]+" <b>"+st.dex[i]+"</b>/"+st.dexTotals[i]; db.appendChild(d); }
+
+    var p=$("panel"); p.innerHTML="";
+    if (tab==="rod")   return renderShop(p, st.rods, "rod", rodStat);
+    if (tab==="line")  return renderShop(p, st.lines, "line", lineStat);
+    if (tab==="float") return renderShop(p, st.floats, "float", floatStat);
+    // 준비 중 탭
+    var soon = {bait:["🪱","미끼 — 곧 열려요!","캐스팅 전 미끼로 희귀·대박 확률 ↑"],
+                enh:["⚒","장비 강화 — 곧 열려요!","낚싯대·찌를 +강화해 성능 ↑ (실패 리스크)"],
+                gacha:["🎰","가챠 — 곧 열려요!","코인으로 뽑기! 미끼·버프·치장 획득"]}[tab];
+    p.innerHTML = '<div class="soon"><div class="big">'+soon[0]+'</div><div style="font-family:var(--disp);font-size:18px;color:var(--txt);margin:8px 0">'+soon[1]+'</div>'+soon[2]+'</div>';
+  }
+
+  function rodStat(it){ return "희귀↑ ×"+it.luck+"  ·  코인 ×"+it.mult; }
+  function lineStat(it){ return "손맛 장력 "+Math.round((1-it.resist)*100)+"%↓"; }
+  function floatStat(it){ return "찌맛 입질창 +"+Math.round((it.win-1)*100)+"%  ·  패널티 "+Math.round((1-it.calm)*100)+"%↓"; }
+
+  function renderShop(p, items, kind, statFn){
+    items.forEach(function(it){
+      var row=document.createElement("div");
+      row.className="item"+(it.owned?" cur":"");
+      var btn;
+      if (it.owned) btn='<button class="buy cur" disabled>✅ 사용중</button>';
+      else if (st.coins < it.price) btn='<button class="buy" disabled>코인 부족</button>';
+      else btn='<button class="buy" data-kind="'+kind+'" data-name="'+encodeURIComponent(it.name)+'">구매·장착</button>';
+      row.innerHTML =
+        '<div class="mid"><div class="nm">'+it.name+'</div><div class="st">'+statFn(it)+'</div></div>'+
+        '<div class="pr">'+(it.price===0?"기본":("🪙 "+won(it.price)))+'</div>'+btn;
+      p.appendChild(row);
+    });
+    // 구매 버튼 바인딩
+    Array.prototype.forEach.call(p.querySelectorAll(".buy:not([disabled])"), function(b){
+      b.onclick=function(){ buy(b.getAttribute("data-kind"), decodeURIComponent(b.getAttribute("data-name")), b); };
+    });
+  }
+
+  function buy(kind, name, btn){
+    if (busy) return; busy=true; btn.textContent="구매 중…"; btn.disabled=true;
+    fetch(FN+"/fishRoomBuy",{ method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({token:token, kind:kind, name:name}) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        busy=false;
+        if (d && d.ok){ st=d.state; toast(d.msg||"✅ 완료"); render(); }
+        else { toast("⚠️ "+((d&&d.error)||"실패")); render(); }
+      })
+      .catch(function(){ busy=false; toast("⚠️ 네트워크 오류"); render(); });
+  }
+})();
+</script>
+</body>
+</html>
