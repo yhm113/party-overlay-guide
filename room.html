@@ -58,6 +58,12 @@
   .buy[disabled] { background:#1a2c42; color:var(--sub); cursor:default; }
   .buy.cur { background:transparent; color:var(--good); border:1px solid var(--good); }
 
+  .dexg { background:linear-gradient(180deg,var(--bg2),var(--panel)); border:1px solid var(--line); border-radius:12px; padding:9px 11px; margin-bottom:8px; }
+  .dgh { font-family:var(--disp); font-size:14px; margin-bottom:6px; }
+  .dgh span { color:var(--sub); font-size:12px; }
+  .dgb { display:flex; flex-wrap:wrap; gap:5px; }
+  .fc { font-size:12px; background:#0a1522; border:1px solid var(--line); border-radius:7px; padding:3px 7px; color:var(--txt); }
+  .fc.miss { color:var(--sub); opacity:.65; }
   .soon { text-align:center; color:var(--sub); font-size:14px; line-height:1.9; padding:34px 10px; }
   .soon .big { font-size:40px; }
   .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
@@ -111,6 +117,7 @@
     {id:"rod",   name:"🎣 낚싯대", lock:false},
     {id:"line",  name:"🧵 낚싯줄", lock:false},
     {id:"float", name:"🎣 찌",    lock:false},
+    {id:"dex",   name:"📖 도감",   lock:false},
     {id:"bait",  name:"🪱 미끼",   lock:true},
     {id:"enh",   name:"⚒ 강화",   lock:true},
     {id:"gacha", name:"🎰 가챠",   lock:true}
@@ -151,11 +158,42 @@
     if (tab==="rod")   return renderShop(p, st.rods, "rod", rodStat);
     if (tab==="line")  return renderShop(p, st.lines, "line", lineStat);
     if (tab==="float") return renderShop(p, st.floats, "float", floatStat);
+    if (tab==="dex")   return renderDex(p);
     // 준비 중 탭
     var soon = {bait:["🪱","미끼 — 곧 열려요!","캐스팅 전 미끼로 희귀·대박 확률 ↑"],
                 enh:["⚒","장비 강화 — 곧 열려요!","낚싯대·찌를 +강화해 성능 ↑ (실패 리스크)"],
                 gacha:["🎰","가챠 — 곧 열려요!","코인으로 뽑기! 미끼·버프·치장 획득"]}[tab];
     p.innerHTML = '<div class="soon"><div class="big">'+soon[0]+'</div><div style="font-family:var(--disp);font-size:18px;color:var(--txt);margin:8px 0">'+soon[1]+'</div>'+soon[2]+'</div>';
+  }
+
+  var dexBook = 1;
+  function renderDex(p){
+    var h = '<div class="tabs" style="margin-bottom:10px">';
+    var bk=["📖 1","📗 2","📘 3","📙 4"];
+    for (var i=1;i<=4;i++){ h += '<div class="tab'+(i===dexBook?" on":"")+'" data-bk="'+i+'">'+bk[i-1]+'</div>'; }
+    h += '</div><div id="dexList" class="soon">불러오는 중…</div>';
+    p.innerHTML = h;
+    Array.prototype.forEach.call(p.querySelectorAll(".tab[data-bk]"), function(b){
+      b.onclick=function(){ dexBook=+b.getAttribute("data-bk"); render(); };
+    });
+    loadDex();
+  }
+  function loadDex(){
+    fetch(FN+"/fishRoomDex?t="+encodeURIComponent(token)+"&book="+dexBook)
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        var el=$("dexList"); if(!el) return;
+        if (!d || !d.ok){ el.textContent="불러오기 실패"; return; }
+        var h='<div style="text-align:center;font-family:var(--disp);font-size:16px;margin:2px 0 12px">'+d.label+' · <span style="color:var(--good)">'+d.caught+'</span>/'+d.total+'</div>';
+        d.groups.forEach(function(g){
+          h+='<div class="dexg"><div class="dgh">'+g.emoji+' '+g.tier+' <span>('+g.caught.length+'/'+g.total+')</span></div><div class="dgb">';
+          g.caught.forEach(function(it){ h+='<span class="fc">'+it.name+' ×'+it.n+'</span>'; });
+          if (g.missing>0) h+='<span class="fc miss">❔ '+g.missing+'종 미발견</span>';
+          h+='</div></div>';
+        });
+        el.className=""; el.innerHTML=h;
+      })
+      .catch(function(){ var el=$("dexList"); if(el) el.textContent="네트워크 오류"; });
   }
 
   function rodStat(it){ return "희귀↑ ×"+it.luck+"  ·  코인 ×"+it.mult; }
