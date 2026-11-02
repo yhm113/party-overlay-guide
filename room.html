@@ -109,6 +109,7 @@
       <div class="row"><span>🎣 낚싯대</span><b id="gRod">-</b></div>
       <div class="row"><span>🧵 낚싯줄</span><b id="gLine">-</b></div>
       <div class="row"><span>🎣 찌</span><b id="gFloat">-</b></div>
+      <div class="row"><span>🪱 미끼</span><b id="gBait">-</b></div>
       <div class="row"><span>🏆 최대어</span><b id="gBest">-</b></div>
       <div class="dex" id="dexBox"></div>
     </div>
@@ -140,7 +141,7 @@
     {id:"float", name:"🎣 찌",    lock:false},
     {id:"dex",   name:"📖 도감",   lock:false},
     {id:"odds",  name:"🎲 확률",   lock:false},
-    {id:"bait",  name:"🪱 미끼",   lock:true},
+    {id:"bait",  name:"🪱 미끼",   lock:false},
     {id:"enh",   name:"⚒ 강화",   lock:true},
     {id:"gacha", name:"🎰 가챠",   lock:true}
   ];
@@ -212,6 +213,7 @@
     // 상단 요약
     $("coinTxt").textContent = won(st.coins);
     $("gRod").textContent = st.rod; $("gLine").textContent = st.line; $("gFloat").textContent = st.float;
+    $("gBait").textContent = st.bait ? st.bait : "무미끼";
     $("gBest").textContent = st.best ? (st.best.name+" "+st.best.size+"cm") : "-";
     var db=$("dexBox"); db.innerHTML="";
     for (var i=0;i<4;i++){ var d=document.createElement("div"); d.className="d";
@@ -223,9 +225,9 @@
     if (tab==="float") return renderShop(p, st.floats, "float", floatStat);
     if (tab==="dex")   return renderDex(p);
     if (tab==="odds")  return renderOdds(p);
+    if (tab==="bait")  return renderBait(p);
     // 준비 중 탭
-    var soon = {bait:["🪱","미끼 — 곧 열려요!","캐스팅 전 미끼로 희귀·대박 확률 ↑"],
-                enh:["⚒","장비 강화 — 곧 열려요!","낚싯대·찌를 +강화해 성능 ↑ (실패 리스크)"],
+    var soon = {enh:["⚒","장비 강화 — 곧 열려요!","낚싯대·찌를 +강화해 성능 ↑ (실패 리스크)"],
                 gacha:["🎰","가챠 — 곧 열려요!","코인으로 뽑기! 미끼·버프·치장 획득"]}[tab];
     p.innerHTML = '<div class="soon"><div class="big">'+soon[0]+'</div><div style="font-family:var(--disp);font-size:18px;color:var(--txt);margin:8px 0">'+soon[1]+'</div>'+soon[2]+'</div>';
   }
@@ -238,8 +240,50 @@
            '<div class="pr" style="color:var(--txt);font-size:15px">'+t.pct.toFixed(t.pct<1?2:1)+'%</div></div>';
     });
     h += '<div class="gear" style="margin-top:10px;text-align:center;font-family:var(--disp);font-size:15px;color:var(--gold)">💰 코인 배수 ×'+o.coinMult+'</div>';
-    h += '<div class="soon" style="padding:12px 10px;font-size:12px">낚싯대·이벤트에 따라 자동 반영돼요</div>';
+    h += '<div class="soon" style="padding:12px 10px;font-size:12px">낚싯대·미끼·이벤트에 따라 자동 반영돼요'+(st.bait?('<br>🪱 '+st.bait+' 효과 포함'):'')+'</div>';
     p.innerHTML = h;
+  }
+
+  function renderBait(p){
+    var h = '<div class="soon" style="padding:6px 10px 12px;font-size:12px;line-height:1.7">🪱 미끼는 <b style="color:var(--txt)">캐스팅마다 1개 소모</b>되고 희귀+ 확률을 올려줘요.<br>재고가 떨어지면 자동으로 해제돼요.</div>';
+    var cur = st.bait || "";
+    h += '<div class="gear" style="text-align:center;margin-bottom:12px"><span style="color:var(--sub)">장착 미끼</span> &nbsp; '+
+         '<b style="font-family:var(--disp);font-size:16px;color:'+(cur?"var(--good)":"var(--sub)")+'">'+(cur?cur:"무미끼")+'</b>'+
+         (cur?' <button class="buy" style="padding:5px 10px;font-size:12px;margin-left:8px" data-eq="">해제</button>':'')+'</div>';
+    (st.baits||[]).forEach(function(it){
+      var owned = it.count>0, equipped = it.cur;
+      h += '<div class="item'+(equipped?" cur":"")+'" style="flex-wrap:wrap">';
+      h += '<div class="mid" style="flex:1 1 55%"><div class="nm">'+it.name+(owned?' <span style="font-size:12px;color:var(--good)">×'+won(it.count)+'</span>':'')+
+           '</div><div class="st">희귀↑ ×'+it.luck+'  ·  개당 🪙'+won(it.price)+'</div></div>';
+      if (equipped) h += '<button class="buy cur" disabled style="flex:0 0 auto">✅ 장착중</button>';
+      else if (owned) h += '<button class="buy" style="flex:0 0 auto" data-eq="'+encodeURIComponent(it.name)+'">장착</button>';
+      else h += '<span class="pr" style="flex:0 0 auto">미보유</span>';
+      h += '<div style="flex:1 1 100%;display:flex;gap:6px;margin-top:8px">';
+      (st.baitPacks||[10,50,100]).forEach(function(q){
+        var cost=it.price*q, can=st.coins>=cost;
+        h += '<button class="buy" style="flex:1;padding:7px 4px;font-size:13px;line-height:1.25'+(can?"":";opacity:.45")+'" '+
+             (can?('data-buy="'+encodeURIComponent(it.name)+'" data-qty="'+q+'"'):"disabled")+'>×'+q+'<br><span style="font-size:10px">🪙'+won(cost)+'</span></button>';
+      });
+      h += '</div></div>';
+    });
+    p.innerHTML = h;
+    Array.prototype.forEach.call(p.querySelectorAll("[data-eq]"), function(b){
+      b.onclick=function(){ baitAction("equip", decodeURIComponent(b.getAttribute("data-eq")), 0, b); };
+    });
+    Array.prototype.forEach.call(p.querySelectorAll("[data-buy]"), function(b){
+      b.onclick=function(){ baitAction("buy", decodeURIComponent(b.getAttribute("data-buy")), +b.getAttribute("data-qty"), b); };
+    });
+  }
+  function baitAction(action, name, qty, btn){
+    if (busy) return; busy=true; btn.disabled=true; var old=btn.innerHTML; btn.innerHTML="처리 중…";
+    fetch(FN+"/fishRoomBait",{ method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({token:token, action:action, name:name, qty:qty, pass:pass}) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ busy=false;
+        if (d && d.ok){ st=d.state; toast(d.msg||"✅ 완료"); render(); }
+        else { toast("⚠️ "+((d&&d.error)||"실패")); render(); }
+      })
+      .catch(function(){ busy=false; toast("⚠️ 네트워크 오류"); render(); });
   }
 
   var dexBook = 1;
