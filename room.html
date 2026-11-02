@@ -142,7 +142,7 @@
     {id:"dex",   name:"📖 도감",   lock:false},
     {id:"odds",  name:"🎲 확률",   lock:false},
     {id:"bait",  name:"🪱 미끼",   lock:false},
-    {id:"enh",   name:"⚒ 강화",   lock:true},
+    {id:"enh",   name:"⚒ 강화",   lock:false},
     {id:"gacha", name:"🎰 가챠",   lock:true}
   ];
 
@@ -212,7 +212,10 @@
   function render(){
     // 상단 요약
     $("coinTxt").textContent = won(st.coins);
-    $("gRod").textContent = st.rod; $("gLine").textContent = st.line; $("gFloat").textContent = st.float;
+    var pl = function(n){ return n>0 ? (" +"+n) : ""; };
+    $("gRod").textContent = st.rod + pl(st.rodLvl||0);
+    $("gLine").textContent = st.line + pl(st.lineLvl||0);
+    $("gFloat").textContent = st.float + pl(st.floatLvl||0);
     $("gBait").textContent = st.bait ? st.bait : "무미끼";
     $("gBest").textContent = st.best ? (st.best.name+" "+st.best.size+"cm") : "-";
     var db=$("dexBox"); db.innerHTML="";
@@ -226,9 +229,9 @@
     if (tab==="dex")   return renderDex(p);
     if (tab==="odds")  return renderOdds(p);
     if (tab==="bait")  return renderBait(p);
+    if (tab==="enh")   return renderEnhance(p);
     // 준비 중 탭
-    var soon = {enh:["⚒","장비 강화 — 곧 열려요!","낚싯대·찌를 +강화해 성능 ↑ (실패 리스크)"],
-                gacha:["🎰","가챠 — 곧 열려요!","코인으로 뽑기! 미끼·버프·치장 획득"]}[tab];
+    var soon = {gacha:["🎰","가챠 — 곧 열려요!","코인으로 뽑기! 미끼·버프·치장 획득"]}[tab];
     p.innerHTML = '<div class="soon"><div class="big">'+soon[0]+'</div><div style="font-family:var(--disp);font-size:18px;color:var(--txt);margin:8px 0">'+soon[1]+'</div>'+soon[2]+'</div>';
   }
 
@@ -273,6 +276,47 @@
     Array.prototype.forEach.call(p.querySelectorAll("[data-buy]"), function(b){
       b.onclick=function(){ baitAction("buy", decodeURIComponent(b.getAttribute("data-buy")), +b.getAttribute("data-qty"), b); };
     });
+  }
+  function renderEnhance(p){
+    var h = '<div class="soon" style="padding:6px 10px 12px;font-size:12px;line-height:1.7">⚒ <b style="color:var(--txt)">착용 중인</b> 장비를 강화해요. 레벨이 높을수록 <b style="color:var(--txt)">성공률 급락</b>, <b style="color:var(--bad)">실패 시 코인만 소모</b>(레벨 유지). 강화는 아이템별로 저장돼요.</div>';
+    var cats = [["rod","🎣 낚싯대"],["line","🧵 낚싯줄"],["float","🎣 찌"]];
+    cats.forEach(function(c){
+      var e = (st.enh||{})[c[0]]; if(!e) return;
+      var maxed = e.maxed;
+      h += '<div class="item" style="flex-wrap:wrap'+(maxed?';border-color:var(--gold)':'')+'">';
+      h += '<div class="mid" style="flex:1 1 60%"><div class="nm">'+c[1].split(" ")[0]+' '+e.name+
+           ' <span style="color:var(--gold);font-size:14px">'+(e.level>0?"+"+e.level:"+0")+'</span></div>'+
+           '<div class="st">'+e.stat+'</div></div>';
+      if (maxed){
+        h += '<div class="pr" style="flex:0 0 auto;color:var(--gold)">최대 ✨</div>';
+      } else {
+        var can = st.coins >= e.nextCost;
+        h += '<div class="pr" style="flex:0 0 auto;text-align:right">→ +'+(e.level+1)+'<br><span style="font-size:11px;color:var(--sub)">성공 '+e.nextRate+'%</span></div>';
+        h += '<div style="flex:1 1 100%;display:flex;gap:8px;align-items:center;margin-top:8px">';
+        h += '<div style="flex:1;font-size:12px;color:var(--gold)">🪙 '+won(e.nextCost)+'</div>';
+        h += '<button class="buy" style="flex:0 0 auto'+(can?'':';opacity:.45')+'" '+(can?('data-enh="'+c[0]+'"'):'disabled')+'>강화</button>';
+        h += '</div>';
+      }
+      h += '</div>';
+    });
+    // 강화 성공률 표
+    h += '<div class="dexg" style="margin-top:10px"><div class="dgh">📈 성공률</div><div class="dgb" style="font-size:11px;color:var(--sub);line-height:1.8">'+
+         '+1 95% · +2 90% · +3 85% · +4 78% · +5 70% · +6 60% · +7 50% · +8 40% · +9 30% · +10 22%</div></div>';
+    p.innerHTML = h;
+    Array.prototype.forEach.call(p.querySelectorAll("[data-enh]"), function(b){
+      b.onclick=function(){ enhance(b.getAttribute("data-enh"), b); };
+    });
+  }
+  function enhance(cat, btn){
+    if (busy) return; busy=true; btn.disabled=true; btn.textContent="강화 중…";
+    fetch(FN+"/fishRoomEnhance",{ method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({token:token, cat:cat, pass:pass}) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ busy=false;
+        if (d && d.ok){ st=d.state; toast(d.msg||(d.success?"✨ 성공":"💥 실패")); render(); }
+        else { toast("⚠️ "+((d&&d.error)||"실패")); render(); }
+      })
+      .catch(function(){ busy=false; toast("⚠️ 네트워크 오류"); render(); });
   }
   function baitAction(action, name, qty, btn){
     if (busy) return; busy=true; btn.disabled=true; var old=btn.innerHTML; btn.innerHTML="처리 중…";
