@@ -133,7 +133,7 @@
   function toast(msg){ var t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(function(){ t.classList.remove("show"); },1800); }
 
   var token = qs("t");
-  var st = null, tab = "rod", busy = false;
+  var st = null, tab = "rod", busy = false, resetTimer = null;
   var DEXN = ["📖도감1","📗도감2","📘도감3","📙도감4"];
   var TABS = [
     {id:"rod",   name:"🎣 낚싯대", lock:false},
@@ -143,6 +143,7 @@
     {id:"odds",  name:"🎲 확률",   lock:false},
     {id:"bait",  name:"🪱 미끼",   lock:false},
     {id:"enh",   name:"⚒ 강화",   lock:false},
+    {id:"reset", name:"⏱ 즉시권",  lock:false},
     {id:"gacha", name:"🎰 가챠",   lock:true}
   ];
 
@@ -210,6 +211,7 @@
   }
 
   function render(){
+    if (resetTimer){ clearInterval(resetTimer); resetTimer=null; } // 탭 전환 시 카운트다운 정리
     // 상단 요약
     $("coinTxt").textContent = won(st.coins);
     var pl = function(n){ return n>0 ? (" +"+n) : ""; };
@@ -230,6 +232,7 @@
     if (tab==="odds")  return renderOdds(p);
     if (tab==="bait")  return renderBait(p);
     if (tab==="enh")   return renderEnhance(p);
+    if (tab==="reset") return renderReset(p);
     // 준비 중 탭
     var soon = {gacha:["🎰","가챠 — 곧 열려요!","코인으로 뽑기! 미끼·버프·치장 획득"]}[tab];
     p.innerHTML = '<div class="soon"><div class="big">'+soon[0]+'</div><div style="font-family:var(--disp);font-size:18px;color:var(--txt);margin:8px 0">'+soon[1]+'</div>'+soon[2]+'</div>';
@@ -276,6 +279,48 @@
     Array.prototype.forEach.call(p.querySelectorAll("[data-buy]"), function(b){
       b.onclick=function(){ baitAction("buy", decodeURIComponent(b.getAttribute("data-buy")), +b.getAttribute("data-qty"), b); };
     });
+  }
+  function fmtDur(ms){ var s=Math.max(0,Math.ceil(ms/1000)); var m=Math.floor(s/60); s=s%60; return m+"분 "+(s<10?"0":"")+s+"초"; }
+  function renderReset(p){
+    var r = st.reset || {onCooldown:false, remainMs:0, cooldownMin:20, usedToday:0, price:0};
+    var h = '<div class="soon" style="padding:6px 10px 12px;font-size:12px;line-height:1.7">⏱ 쿨타임(약 '+r.cooldownMin+'분)을 <b style="color:var(--txt)">즉시 없애고</b> 바로 낚시할 수 있어요.<br>가격은 <b style="color:var(--txt)">낚싯대가 좋을수록 · 오늘 많이 쓸수록</b> 올라가요.</div>';
+    if (r.onCooldown){
+      var can = st.coins >= r.price;
+      h += '<div class="item" style="flex-direction:column;align-items:stretch;gap:10px;text-align:center;padding:18px 14px">';
+      h += '<div style="font-size:13px;color:var(--sub)">남은 쿨타임</div>';
+      h += '<div id="rsRemain" style="font-family:var(--disp);font-size:30px;color:var(--accent)">'+fmtDur(r.remainMs)+'</div>';
+      h += '<div style="font-size:13px;color:var(--gold)">즉시 리셋 🪙 '+won(r.price)+(r.usedToday>0?' <span style="color:var(--sub);font-size:11px">(오늘 '+r.usedToday+'번 씀)</span>':'')+'</div>';
+      h += '<button class="btn" id="rsBtn" style="margin-top:4px"'+(can?'':' disabled')+'>⏱ 즉시 리셋'+(can?'':' (코인 부족)')+'</button>';
+      h += '</div>';
+    } else {
+      h += '<div class="item" style="flex-direction:column;align-items:center;gap:8px;text-align:center;padding:24px 14px;border-color:var(--good)">';
+      h += '<div style="font-size:30px">✅</div><div style="font-family:var(--disp);font-size:18px">지금 바로 낚시 가능!</div>';
+      h += '<div style="font-size:12px;color:var(--sub)">카톡에서 /낚시 하세요.<br>쿨타임이 생기면 여기서 즉시 리셋할 수 있어요.</div>';
+      h += '</div>';
+    }
+    h += '<div class="dexg" style="margin-top:10px"><div class="dgb" style="font-size:11px;color:var(--sub);line-height:1.7">💡 리셋 비용은 '+(r.usedToday>0?'오늘 '+r.usedToday+'번 써서 올라간 상태예요. ':'')+'새벽 6시에 초기화돼요 (낚싯대 코인배수 비례).</div></div>';
+    p.innerHTML = h;
+    var btn=$("rsBtn"); if(btn) btn.onclick=function(){ resetCooldown(btn); };
+    if (r.onCooldown){
+      var left=r.remainMs;
+      resetTimer=setInterval(function(){
+        left-=1000; var el=$("rsRemain");
+        if(!el){ clearInterval(resetTimer); resetTimer=null; return; }
+        if(left<=0){ clearInterval(resetTimer); resetTimer=null; if(tab==="reset"){ st.reset.onCooldown=false; st.reset.remainMs=0; render(); } return; }
+        el.textContent=fmtDur(left);
+      },1000);
+    }
+  }
+  function resetCooldown(btn){
+    if (busy) return; busy=true; btn.disabled=true; btn.textContent="리셋 중…";
+    fetch(FN+"/fishRoomReset",{ method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({token:token, pass:pass}) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ busy=false;
+        if (d && d.ok){ st=d.state; toast(d.msg||"⏱ 리셋 완료"); render(); }
+        else { toast("⚠️ "+((d&&d.error)||"실패")); render(); }
+      })
+      .catch(function(){ busy=false; toast("⚠️ 네트워크 오류"); render(); });
   }
   function renderEnhance(p){
     var h = '<div class="soon" style="padding:6px 10px 12px;font-size:12px;line-height:1.7">⚒ <b style="color:var(--txt)">착용 중인</b> 장비를 강화해요. 레벨이 높을수록 <b style="color:var(--txt)">성공률 급락</b>, <b style="color:var(--bad)">실패 시 코인만 소모</b>(레벨 유지). 강화는 아이템별로 저장돼요.</div>';
