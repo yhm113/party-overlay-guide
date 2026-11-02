@@ -133,7 +133,7 @@
   function toast(msg){ var t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(function(){ t.classList.remove("show"); },1800); }
 
   var token = qs("t");
-  var st = null, tab = "rod", busy = false, resetTimer = null;
+  var st = null, tab = "rod", busy = false, resetTimer = null, lastGacha = null;
   var DEXN = ["📖도감1","📗도감2","📘도감3","📙도감4"];
   var TABS = [
     {id:"rod",   name:"🎣 낚싯대", lock:false},
@@ -144,7 +144,7 @@
     {id:"bait",  name:"🪱 미끼",   lock:false},
     {id:"enh",   name:"⚒ 강화",   lock:false},
     {id:"reset", name:"⏱ 즉시권",  lock:false},
-    {id:"gacha", name:"🎰 가챠",   lock:true}
+    {id:"gacha", name:"🎰 가챠",   lock:false}
   ];
 
   var pass = null, gateMode = null;
@@ -233,9 +233,7 @@
     if (tab==="bait")  return renderBait(p);
     if (tab==="enh")   return renderEnhance(p);
     if (tab==="reset") return renderReset(p);
-    // 준비 중 탭
-    var soon = {gacha:["🎰","가챠 — 곧 열려요!","코인으로 뽑기! 미끼·버프·치장 획득"]}[tab];
-    p.innerHTML = '<div class="soon"><div class="big">'+soon[0]+'</div><div style="font-family:var(--disp);font-size:18px;color:var(--txt);margin:8px 0">'+soon[1]+'</div>'+soon[2]+'</div>';
+    if (tab==="gacha") return renderGacha(p);
   }
 
   function renderOdds(p){
@@ -318,6 +316,67 @@
       .then(function(r){ return r.json(); })
       .then(function(d){ busy=false;
         if (d && d.ok){ st=d.state; toast(d.msg||"⏱ 리셋 완료"); render(); }
+        else { toast("⚠️ "+((d&&d.error)||"실패")); render(); }
+      })
+      .catch(function(){ busy=false; toast("⚠️ 네트워크 오류"); render(); });
+  }
+  function rarKo(r){ return r==="legend"?"전설":r==="rare"?"희귀":"일반"; }
+  function rarColor(r){ return r==="legend"?"var(--gold)":r==="rare"?"var(--accent)":"var(--sub)"; }
+  function renderGacha(p){
+    var price = st.gachaPrice||10000;
+    var can1 = st.coins>=price, can10 = st.coins>=price*10;
+    var h = '<div class="soon" style="padding:6px 10px 10px;font-size:12px;line-height:1.7">🎰 뽑기로 코인·미끼·<b style="color:var(--gold)">칭호</b> 획득! 칭호는 랭킹·낚시정보에 표시되는 수집 플렉스예요.</div>';
+    h += '<div style="display:flex;gap:8px;margin-bottom:12px">';
+    h += '<button class="btn" id="gc1" style="flex:1;margin-top:0;line-height:1.3'+(can1?'':';opacity:.45')+'"'+(can1?'':' disabled')+'>1회<br><span style="font-size:12px">🪙'+won(price)+'</span></button>';
+    h += '<button class="btn" id="gc10" style="flex:1;margin-top:0;line-height:1.3;color:#5a3d00;background:linear-gradient(180deg,#ffe07a,#e0a800)'+(can10?'':';opacity:.45')+'"'+(can10?'':' disabled')+'>10연<br><span style="font-size:12px">🪙'+won(price*10)+'</span></button>';
+    h += '</div>';
+    if (lastGacha && lastGacha.length){
+      h += '<div class="dexg"><div class="dgh">🎁 뽑기 결과</div>';
+      lastGacha.forEach(function(r){
+        var c = (r.type==="jackpot")?"var(--gold)":(r.type==="title")?"var(--accent)":"var(--txt)";
+        h += '<div style="padding:5px 2px;font-size:14px;color:'+c+'">'+r.label+'</div>';
+      });
+      h += '</div>';
+    }
+    h += '<div style="font-family:var(--disp);font-size:15px;margin:14px 0 8px">🏷 내 칭호 <span style="color:var(--sub);font-size:12px">('+(st.titles?st.titles.length:0)+'/'+(st.titleCatalog?st.titleCatalog.length:0)+')</span></div>';
+    (st.titleCatalog||[]).forEach(function(tc){
+      var color = rarColor(tc.rarity);
+      h += '<div class="item" style="padding:9px 12px'+(tc.cur?';border-color:var(--good)':'')+'">';
+      h += '<div class="mid"><div class="nm" style="font-size:15px;color:'+(tc.owned?color:'var(--sub)')+'">'+tc.emoji+' '+tc.name+' <span style="font-size:11px;color:'+color+'">'+rarKo(tc.rarity)+'</span></div></div>';
+      if (tc.cur) h += '<button class="buy cur" disabled>✅ 장착중</button>';
+      else if (tc.owned) h += '<button class="buy" data-tt="'+encodeURIComponent(tc.name)+'">장착</button>';
+      else h += '<span class="pr" style="color:var(--sub)">🔒 미보유</span>';
+      h += '</div>';
+    });
+    if (st.title) h += '<div style="text-align:center;margin-top:8px"><button class="buy" data-tt="" style="padding:6px 14px;font-size:12px;background:#1a2c42;color:var(--sub)">칭호 해제</button></div>';
+    p.innerHTML = h;
+    var b1=$("gc1"); if(b1) b1.onclick=function(){ gachaPull(1,b1); };
+    var b10=$("gc10"); if(b10) b10.onclick=function(){ gachaPull(10,b10); };
+    Array.prototype.forEach.call(p.querySelectorAll("[data-tt]"), function(b){
+      b.onclick=function(){ equipTitle(decodeURIComponent(b.getAttribute("data-tt")), b); };
+    });
+  }
+  function gachaPull(count, btn){
+    if (busy) return; busy=true; btn.disabled=true; btn.innerHTML="뽑는 중…";
+    fetch(FN+"/fishRoomGacha",{ method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({token:token, action:"pull", count:count, pass:pass}) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ busy=false;
+        if (d && d.ok){ st=d.state; lastGacha=d.results||[];
+          var tt=lastGacha.filter(function(x){return x.type==="title"||(x.type==="jackpot"&&x.name);});
+          toast(tt.length?("🏷 칭호 획득! "+tt.map(function(x){return x.name;}).join(", ")):"🎁 뽑기 완료");
+          render();
+        } else { toast("⚠️ "+((d&&d.error)||"실패")); render(); }
+      })
+      .catch(function(){ busy=false; toast("⚠️ 네트워크 오류"); render(); });
+  }
+  function equipTitle(name, btn){
+    if (busy) return; busy=true; btn.disabled=true;
+    fetch(FN+"/fishRoomGacha",{ method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({token:token, action:"equipTitle", name:name, pass:pass}) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ busy=false;
+        if (d && d.ok){ st=d.state; toast(d.msg||"🏷 완료"); render(); }
         else { toast("⚠️ "+((d&&d.error)||"실패")); render(); }
       })
       .catch(function(){ busy=false; toast("⚠️ 네트워크 오류"); render(); });
