@@ -144,7 +144,7 @@
   function toast(msg){ var t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(function(){ t.classList.remove("show"); },1800); }
 
   var token = qs("t");
-  var st = null, tab = "rod", busy = false, resetTimer = null, lastGacha = null;
+  var st = null, tab = "rod", busy = false, resetTimer = null, lastGacha = null, showLocked = false;
   var DEXN = ["📖도감1","📗도감2","📘도감3","📙도감4"];
   var TABS = [
     {id:"rod",   name:"🎣 낚싯대", lock:false},
@@ -373,38 +373,39 @@
       h += '</div>';
     }
     var cat = st.titleCatalog||[];
-    var ownedN = cat.filter(function(t){return t.owned;}).length;
-    var anyHint = cat.some(function(t){return !t.owned && t.hint;});
-    h += '<div style="font-family:var(--disp);font-size:15px;margin:14px 0 4px">🏷 내 칭호 <span style="color:var(--sub);font-size:12px">('+ownedN+'/'+cat.length+')</span></div>';
-    h += '<div style="font-size:11px;color:var(--good);margin-bottom:4px">💡 장착 칭호 효과 100% + <b>보유 칭호도 각 '+(st.titleOwnRate||20)+'%</b> 패시브 적용 (합산)</div>';
-    if(anyHint) h += '<div style="font-size:11px;color:var(--sub);margin-bottom:6px">미보유 칭호는 ❓로, 획득 힌트만 보여요</div>';
-    ["gacha","ach"].forEach(function(src){
-      var items = cat.filter(function(t){return t.source===src;});
-      if(!items.length) return;
-      h += '<div style="font-size:12px;color:var(--accent);margin:12px 0 6px;font-family:var(--disp)">'+(src==="gacha"?"🎰 가챠 칭호":"🏅 업적 칭호")+'</div>';
-      items.forEach(function(tc){
-        var color = rarColor(tc.rarity);
-        h += '<div class="item" style="padding:9px 12px'+(tc.cur?';border-color:var(--good)':'')+'">';
-        if(tc.owned){
-          h += '<div class="mid"><div class="nm" style="font-size:15px;color:'+color+'">'+tc.emoji+' '+tc.name+' <span style="font-size:11px;color:'+color+'">'+rarKo(tc.rarity)+'</span></div>'+
-               (tc.effect?'<div class="st" style="color:var(--good)">'+tc.effect+'</div>':'')+'</div>';
-          if(tc.cur) h += '<button class="buy cur" disabled>✅ 장착중</button>';
-          else h += '<button class="buy" data-tt="'+encodeURIComponent(tc.name)+'">장착</button>';
-        } else if(tc.hint){ // v2 ON: 미보유=???+힌트
-          h += '<div class="mid"><div class="nm" style="font-size:15px;color:var(--sub)">❓ ??? <span style="font-size:11px;color:'+color+'">'+rarKo(tc.rarity)+'</span></div>'+
-               '<div class="st" style="font-style:italic">'+tc.hint+'</div></div>';
-          h += '<span class="pr" style="color:var(--sub)">🔒</span>';
-        } else { // v2 OFF(또는 힌트없음): 실명+미보유
-          h += '<div class="mid"><div class="nm" style="font-size:15px;color:var(--sub)">'+tc.emoji+' '+tc.name+' <span style="font-size:11px;color:'+color+'">'+rarKo(tc.rarity)+'</span></div></div>';
-          h += '<span class="pr" style="color:var(--sub)">🔒 미보유</span>';
-        }
-        h += '</div>';
-      });
+    var owned = cat.filter(function(t){return t.owned;});
+    var locked = cat.filter(function(t){return !t.owned;});
+    h += '<div style="font-family:var(--disp);font-size:15px;margin:14px 0 4px">🏷 내 칭호 <span style="color:var(--sub);font-size:12px">('+owned.length+'/'+cat.length+')</span></div>';
+    h += '<div style="font-size:11px;color:var(--good);margin-bottom:8px">💡 장착 100% + <b>보유 칭호도 각 '+(st.titleOwnRate||20)+'%</b> 합산</div>';
+    // 보유 칭호(촘촘)
+    if(!owned.length) h += '<div style="font-size:12px;color:var(--sub);padding:6px 2px">아직 보유 칭호가 없어요. 가챠·업적으로 모아보세요!</div>';
+    owned.forEach(function(tc){
+      var color = rarColor(tc.rarity);
+      h += '<div class="item" style="padding:7px 10px;margin-bottom:6px'+(tc.cur?';border-color:var(--good)':'')+'">';
+      h += '<div class="mid"><div class="nm" style="font-size:14px;color:'+color+'">'+tc.emoji+' '+tc.name+' <span style="font-size:10px;color:'+color+'">'+rarKo(tc.rarity)+'</span></div>'+
+           (tc.effect?'<div class="st" style="color:var(--good);font-size:11px">'+tc.effect+'</div>':'')+'</div>';
+      if(tc.cur) h += '<button class="buy cur" disabled style="font-size:12px;padding:6px 9px">✅ 장착중</button>';
+      else h += '<button class="buy" data-tt="'+encodeURIComponent(tc.name)+'" style="font-size:12px;padding:6px 9px">장착</button>';
+      h += '</div>';
     });
-    if (st.title) h += '<div style="text-align:center;margin-top:10px"><button class="buy" data-tt="" style="padding:6px 14px;font-size:12px;background:#1a2c42;color:var(--sub)">칭호 해제</button></div>';
+    if (st.title) h += '<div style="margin:2px 0 6px"><button class="buy" data-tt="" style="padding:5px 12px;font-size:11px;background:#1a2c42;color:var(--sub)">칭호 해제</button></div>';
+    // 미보유: 접기 토글
+    if(locked.length){
+      h += '<div id="lockToggle" style="text-align:center;margin:8px 0;font-size:12px;color:var(--sub);background:#0a1522;border:1px solid var(--line);border-radius:10px;padding:8px;cursor:pointer">🔒 미보유 '+locked.length+'종 '+(showLocked?'접기 ▲':'보기 ▼')+'</div>';
+      if(showLocked){
+        locked.forEach(function(tc){
+          var color = rarColor(tc.rarity);
+          var label = tc.hint ? ('❓ ??? · <span style="font-style:italic;color:var(--sub)">'+tc.hint+'</span>') : (tc.emoji+' '+tc.name);
+          h += '<div class="item" style="padding:6px 10px;margin-bottom:5px;opacity:.75">'+
+               '<div class="mid"><div class="nm" style="font-size:13px;color:var(--sub)">'+label+'</div></div>'+
+               '<span class="pr" style="font-size:10px;color:'+color+'">'+rarKo(tc.rarity)+' 🔒</span></div>';
+        });
+      }
+    }
     p.innerHTML = h;
     var b1=$("gc1"); if(b1) b1.onclick=function(){ gachaPull(1,b1); };
     var b10=$("gc10"); if(b10) b10.onclick=function(){ gachaPull(10,b10); };
+    var lt=$("lockToggle"); if(lt) lt.onclick=function(){ showLocked=!showLocked; render(); };
     Array.prototype.forEach.call(p.querySelectorAll("[data-tt]"), function(b){
       b.onclick=function(){ equipTitle(decodeURIComponent(b.getAttribute("data-tt")), b); };
     });
