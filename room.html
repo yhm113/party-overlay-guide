@@ -377,6 +377,7 @@
     var locked = cat.filter(function(t){return !t.owned;});
     h += '<div style="font-family:var(--disp);font-size:15px;margin:14px 0 4px">🏷 내 칭호 <span style="color:var(--sub);font-size:12px">('+owned.length+'/'+cat.length+')</span></div>';
     h += '<div style="font-size:11px;color:var(--good);margin-bottom:8px">💡 장착 100% + <b>보유 칭호도 각 '+(st.titleOwnRate||20)+'%</b> 합산</div>';
+    if (st.title) h += '<div style="margin-bottom:8px"><button class="buy" data-tt="" style="padding:5px 12px;font-size:11px;background:#1a2c42;color:var(--sub)">칭호 해제</button></div>';
     // 보유 칭호(촘촘)
     if(!owned.length) h += '<div style="font-size:12px;color:var(--sub);padding:6px 2px">아직 보유 칭호가 없어요. 가챠·업적으로 모아보세요!</div>';
     owned.forEach(function(tc){
@@ -388,7 +389,6 @@
       else h += '<button class="buy" data-tt="'+encodeURIComponent(tc.name)+'" style="font-size:12px;padding:6px 9px">장착</button>';
       h += '</div>';
     });
-    if (st.title) h += '<div style="margin:2px 0 6px"><button class="buy" data-tt="" style="padding:5px 12px;font-size:11px;background:#1a2c42;color:var(--sub)">칭호 해제</button></div>';
     // 미보유: 접기 토글
     if(locked.length){
       h += '<div id="lockToggle" style="text-align:center;margin:8px 0;font-size:12px;color:var(--sub);background:#0a1522;border:1px solid var(--line);border-radius:10px;padding:8px;cursor:pointer">🔒 미보유 '+locked.length+'종 '+(showLocked?'접기 ▲':'보기 ▼')+'</div>';
