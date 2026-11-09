@@ -111,7 +111,7 @@
       <div class="row"><span>🎣 찌</span><b id="gFloat">-</b></div>
       <div class="row"><span>🪱 미끼</span><b id="gBait">-</b></div>
       <div class="row"><span>🏷 칭호</span><b id="gTitle">-</b></div>
-      <div class="row" id="gTitleEffRow" style="display:none"><span style="color:var(--sub)">└ 효과</span><b id="gTitleEff" style="color:var(--good);font-size:12px;font-weight:400"></b></div>
+      <div class="row" id="gTitleEffRow" style="display:none"><span style="color:var(--sub)">└ 효과(합산)</span><b id="gTitleEff" style="color:var(--good);font-size:12px;font-weight:400"></b></div>
       <div class="row"><span>🏆 최대어</span><b id="gBest">-</b></div>
       <div class="dex" id="dexBox"></div>
     </div>
@@ -250,8 +250,8 @@
     $("gLine").textContent = st.line + pl(st.lineLvl||0);
     $("gFloat").textContent = st.float + pl(st.floatLvl||0);
     $("gBait").textContent = st.bait ? st.bait : "무미끼";
-    $("gTitle").textContent = st.title ? st.title : "없음";
-    if (st.title && st.titleEffect){ $("gTitleEffRow").style.display=""; $("gTitleEff").textContent=st.titleEffect; }
+    $("gTitle").textContent = st.title ? st.title : ((st.titleOwnCount||0) ? "없음 (보유 패시브만)" : "없음");
+    if (st.titleEffect){ $("gTitleEffRow").style.display=""; $("gTitleEff").textContent=st.titleEffect; }
     else { $("gTitleEffRow").style.display="none"; }
     $("gBest").textContent = st.best ? (st.best.name+" "+(st.best.sizeText||st.best.size+"cm")) : "-";
     var db=$("dexBox"); db.innerHTML="";
@@ -376,6 +376,7 @@
     var ownedN = cat.filter(function(t){return t.owned;}).length;
     var anyHint = cat.some(function(t){return !t.owned && t.hint;});
     h += '<div style="font-family:var(--disp);font-size:15px;margin:14px 0 4px">🏷 내 칭호 <span style="color:var(--sub);font-size:12px">('+ownedN+'/'+cat.length+')</span></div>';
+    h += '<div style="font-size:11px;color:var(--good);margin-bottom:4px">💡 장착 칭호 효과 100% + <b>보유 칭호도 각 '+(st.titleOwnRate||20)+'%</b> 패시브 적용 (합산)</div>';
     if(anyHint) h += '<div style="font-size:11px;color:var(--sub);margin-bottom:6px">미보유 칭호는 ❓로, 획득 힌트만 보여요</div>';
     ["gacha","ach"].forEach(function(src){
       var items = cat.filter(function(t){return t.source===src;});
